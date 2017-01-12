@@ -6,8 +6,8 @@ CONFIG(debug, debug|release){
 }
 
 unix:!macx{
-    LIBS += /usr/lib/x86_64-linux-gnu/libGLU.so
-    LIBS += -lboost_system -frounding-math -lgmp -lQGLViewer -lCGAL
+    LIBS += /usr/lib/libGLU.so
+    LIBS += -lboost_system -frounding-math -lgmp -lQGLViewer-qt5 -lCGAL
     DEFINES += CGAL_DEFINED
     QMAKE_CXXFLAGS += -std=c++11 -g
 }
@@ -48,7 +48,8 @@ HEADERS += \
     lib/dcel/drawable_dcel.h \
     lib/common/common.h \
     common.h \
-    lib/common/serialize.h
+    lib/common/serialize.h \
+    MyConvexHull/mydcel.h
 
 SOURCES += \
     GUI/managers/dcelmanager.cpp \
@@ -63,6 +64,7 @@ SOURCES += \
     lib/dcel/drawable_dcel.cpp \
     common.cpp \
     main.cpp \
+    MyConvexHull/mydcel.cpp
 
 FORMS += \
     GUI/managers/dcelmanager.ui \
