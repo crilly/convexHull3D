@@ -59,7 +59,7 @@ void ConvexHullManager::on_convexHullPushButton_clicked() {
              * Begin Convex Hull Algorithm  *
              ********************************/
 
-
+            MyDcel mydcel(dcel, mainWindow);
 
             /********************************
              * End Convex Hull Algorithm    *
