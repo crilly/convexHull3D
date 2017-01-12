@@ -57,5 +57,55 @@ MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainwindow)
 
     }while(det == 0.0);
 
+    dcel->clear();
+
+    Dcel::Vertex *v1 = dcel->addVertex(vertexArray[a]);
+    Dcel::Vertex *v2 = dcel->addVertex(vertexArray[b]);
+    Dcel::Vertex *v3 = dcel->addVertex(vertexArray[c]);
+    Dcel::Vertex *v4 = dcel->addVertex(vertexArray[d]);
+
+    Dcel::Face *f = dcel->addFace();
+    Dcel::Face *f1 = dcel->addFace();
+
+    Dcel::HalfEdge *hf1 = dcel->addHalfEdge();
+    Dcel::HalfEdge *hf2 = dcel->addHalfEdge();
+    Dcel::HalfEdge *hf3 = dcel->addHalfEdge();
+
+    Dcel::HalfEdge *hf4 = dcel->addHalfEdge();
+    Dcel::HalfEdge *hf5 = dcel->addHalfEdge();
+    Dcel::HalfEdge *hf6 = dcel->addHalfEdge();
+
+    hf1->setFromVertex(v1);
+    hf1->setToVertex(v2);
+    hf1->setNext(hf2);
+    hf1->setPrev(hf3);
+
+    hf2->setFromVertex(v2);
+    hf2->setToVertex(v3);
+    hf2->setNext(hf3);
+    hf2->setPrev(hf1);
+
+    hf3->setFromVertex(v3);
+    hf3->setToVertex(v1);
+    hf3->setNext(hf1);
+    hf3->setPrev(hf2);
+
+
+
+    v1->setIncidentHalfEdge(hf1);
+    v2->setIncidentHalfEdge(hf2);
+    v3->setIncidentHalfEdge(hf3);
+
+    hf1->setFace(f);
+    hf2->setFace(f);
+    hf3->setFace(f);
+
+
+
+    f->setOuterHalfEdge(hf1);
+
+
+
+
     bool sburro = true;
 }
