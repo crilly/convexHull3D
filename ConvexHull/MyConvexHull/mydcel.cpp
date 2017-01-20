@@ -55,6 +55,23 @@ MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainwindow)
         det = 0.0;
     }
 
+    //posiziono i 4 punti estratti nelle prime 4 posizioni del mio array (sarà più comodo scorrere tutti gli altri punti in seguito)
+    Pointd temp = vertexArray[0];
+    vertexArray[0] = vertexArray[a];
+    vertexArray[a] = temp;
+
+    temp = vertexArray[1];
+    vertexArray[1] = vertexArray[b];
+    vertexArray[b] = temp;
+
+    temp = vertexArray[2];
+    vertexArray[2] = vertexArray[c];
+    vertexArray[c] = temp;
+
+    temp = vertexArray[3];
+    vertexArray[3] = vertexArray[d];
+    vertexArray[d] = temp;
+
     }while(det == 0.0);
 
     dcel->clear();
@@ -65,15 +82,10 @@ MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainwindow)
     Dcel::Vertex *v4 = dcel->addVertex(vertexArray[d]);
 
     Dcel::Face *f = dcel->addFace();
-    Dcel::Face *f1 = dcel->addFace();
 
     Dcel::HalfEdge *hf1 = dcel->addHalfEdge();
     Dcel::HalfEdge *hf2 = dcel->addHalfEdge();
     Dcel::HalfEdge *hf3 = dcel->addHalfEdge();
-
-    Dcel::HalfEdge *hf4 = dcel->addHalfEdge();
-    Dcel::HalfEdge *hf5 = dcel->addHalfEdge();
-    Dcel::HalfEdge *hf6 = dcel->addHalfEdge();
 
     hf1->setFromVertex(v1);
     hf1->setToVertex(v2);
