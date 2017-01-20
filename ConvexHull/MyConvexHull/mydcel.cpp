@@ -74,18 +74,26 @@ MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainwindow)
 
     }while(det == 0.0);
 
+    //svuoto la Dcel
     dcel->clear();
 
+    //setto la mia Dcel con i primi 4 punti estratti
     Dcel::Vertex *v1 = dcel->addVertex(vertexArray[a]);
     Dcel::Vertex *v2 = dcel->addVertex(vertexArray[b]);
     Dcel::Vertex *v3 = dcel->addVertex(vertexArray[c]);
     Dcel::Vertex *v4 = dcel->addVertex(vertexArray[d]);
 
-    Dcel::Face *f = dcel->addFace();
+    Dcel::Face *f = dcel->addFace();    
 
     Dcel::HalfEdge *hf1 = dcel->addHalfEdge();
     Dcel::HalfEdge *hf2 = dcel->addHalfEdge();
     Dcel::HalfEdge *hf3 = dcel->addHalfEdge();
+
+    f->setOuterHalfEdge(hf1);
+
+    hf1->setFace(f);
+    hf2->setFace(f);
+    hf3->setFace(f);
 
     hf1->setFromVertex(v1);
     hf1->setToVertex(v2);
@@ -102,22 +110,12 @@ MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainwindow)
     hf3->setNext(hf1);
     hf3->setPrev(hf2);
 
-
-
     v1->setIncidentHalfEdge(hf1);
     v2->setIncidentHalfEdge(hf2);
     v3->setIncidentHalfEdge(hf3);
 
-    hf1->setFace(f);
-    hf2->setFace(f);
-    hf3->setFace(f);
 
 
 
-    f->setOuterHalfEdge(hf1);
-
-
-
-
-    bool sburro = true;
+    bool miao = true;
 }
