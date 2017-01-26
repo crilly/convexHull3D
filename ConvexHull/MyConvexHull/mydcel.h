@@ -11,6 +11,11 @@
 
 class MyDcel
 {
+private:
+    int a, b, c, d;
+    double det = 0.0;
+    int returnCoplanarity(std::vector<Pointd> myVertexArray);
+
 public:
     MyDcel(DrawableDcel *dcel, MainWindow *mainWindow);
 };
