@@ -13,6 +13,20 @@ MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainWindow)
 
 
 /**
+ * @brief MyDcel::buildCH metodo che si occupa di costruire la ConvexHull in diversi step:
+ *      1. estrae 4 punti random dalla Dcel del modello in input (controllando che non siano complanari)
+ *      2. inizializza la Dcel con i primi 3 punti estratti
+ *      3. aggiunge il quarto punto costruendo il primo tetraedro
+ *      TODO //finish description
+ */
+void MyDcel::buildCH()
+{
+    tetrahedronBuilder();
+    initializeDcel();
+    addFourthPoint();
+}
+
+/**
  * @brief MyDcel::tetrahedronBuilder costruisce il primo tetraedro estraendo 4 punti random dalla dcel
  */
 void MyDcel::tetrahedronBuilder()
@@ -181,19 +195,4 @@ int MyDcel::returnCoplanarity(std::vector<Pointd> myVertexArray)
 void MyDcel::addFourthPoint()
 {
 
-}
-
-
-/**
- * @brief MyDcel::buildCH metodo che si occupa di costruire la ConvexHull in diversi step:
- * 1. estrae 4 punti random dalla Dcel del modello in input (controllando che non siano complanari)
- * 2. inizializza la Dcel con i primi 3 punti estratti
- * 3. aggiunge il quarto punto costruendo il primo tetraedro
- * TODO //finish description
- */
-void MyDcel::buildCH()
-{
-    tetrahedronBuilder();
-    initializeDcel();
-    addFourthPoint();
 }
