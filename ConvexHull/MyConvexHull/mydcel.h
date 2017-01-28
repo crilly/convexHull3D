@@ -12,12 +12,20 @@
 class MyDcel
 {
 private:
-    int a, b, c, d;
+    DrawableDcel *dcel;
+    MainWindow *mainWindow;
+    int a, b, c, d, coplanarity;
     double det = 0.0;
+    std::vector<Pointd> vertexArray;
+
     int returnCoplanarity(std::vector<Pointd> myVertexArray);
+    void tetrahedronBuilder();
+    void initializeDcel();
+    void addFourthPoint();
 
 public:
     MyDcel(DrawableDcel *dcel, MainWindow *mainWindow);
+    void buildCH();
 };
 
 #endif // MYDCEL_H

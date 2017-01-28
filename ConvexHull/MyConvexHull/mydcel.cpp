@@ -1,11 +1,25 @@
 #include "mydcel.h"
 
-MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainwindow)
+/**
+ * @brief MyDcel::MyDcel costruttore della classe principale
+ * @param dcel consiste della dcel dei punti del modello 3D in input
+ * @param mainwindow
+ */
+MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainWindow)
+{
+    this->dcel = dcel;
+    this->mainWindow = mainWindow;
+}
+
+
+/**
+ * @brief MyDcel::tetrahedronBuilder costruisce il primo tetraedro estraendo 4 punti random dalla dcel
+ */
+void MyDcel::tetrahedronBuilder()
 {
     srand(time(NULL));
-    std::vector<Pointd> vertexArray;
     auto endDcel = dcel->vertexEnd();
-    int coplanarity, arraySize = 0;
+    int coplanarity, size = 0;
 
     //popolo un vettore con le coordinate dei vertici della DCEL in input
     for(auto beginDcel = dcel->vertexBegin(); beginDcel != endDcel; ++beginDcel)
@@ -14,20 +28,20 @@ MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainwindow)
         vertexArray.push_back(v->getCoordinate());
     }
 
-    arraySize = vertexArray.size();
+    size = vertexArray.size();
 
     do
     {
         //estraggo 4 vertici random dividendo il numero totale di vertici in 4 parti
-        a = rand() % arraySize/4;
-        b = arraySize/4 + rand()% (arraySize/2 - arraySize/4);
-        c = arraySize/2 + rand()% (arraySize/4*3 - arraySize/2);
-        d = arraySize/4*3 + rand()% (arraySize - arraySize/4*3 + 1);
+        a = rand() % size/4;
+        b = size/4 + rand()% (size/2 - size/4);
+        c = size/2 + rand()% (size/4*3 - size/2);
+        d = size/4*3 + rand()% (size - size/4*3 + 1);
         printf("%d\t%d\t%d\t%d", a, b, c, d);
 
         coplanarity = returnCoplanarity(vertexArray);
 
-    }while(coplanarity == 0);
+    } while(coplanarity == 0);
 
     //posiziono i 4 punti estratti nelle prime 4 posizioni del mio array (sarà più comodo scorrere tutti gli altri punti in seguito)
     Pointd temp = vertexArray[0];
@@ -45,11 +59,17 @@ MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainwindow)
     temp = vertexArray[3];
     vertexArray[3] = vertexArray[d];
     vertexArray[d] = temp;
+}
 
+/**
+ * @brief MyDcel::initializeDcel
+ */
+void MyDcel::initializeDcel()
+{
     //svuoto la Dcel
     dcel->clear();
 
-    //inizializzo la mia Dcel con i primi 3 vertici estratti
+    //inizializzo la mia Dcel con i primi 4 vertici estratti
     Dcel::Vertex *v1 = dcel->addVertex(vertexArray[a]);
     Dcel::Vertex *v2 = dcel->addVertex(vertexArray[b]);
     Dcel::Vertex *v3 = dcel->addVertex(vertexArray[c]);
@@ -64,7 +84,8 @@ MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainwindow)
     Dcel::HalfEdge *hf3 = dcel->addHalfEdge();
 
     //se il determinante è > 0 allora dobbiamo muoverci in senso antiorario
-    if(coplanarity == 1){
+    if(coplanarity == 1)
+    {
         hf1->setFromVertex(v1);
         hf1->setToVertex(v2);
         hf1->setNext(hf2);
@@ -123,25 +144,22 @@ MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainwindow)
     bool miao = true;
 }
 
+/**
+ * @brief MyDcel::returnCoplanarity
+ * @param myVertexArray
+ * @return
+ */
 int MyDcel::returnCoplanarity(std::vector<Pointd> myVertexArray)
 {
     Eigen::Matrix4d mat;
-    mat(0,0) = myVertexArray[0].x();
-    mat(0,1) = myVertexArray[0].y();
-    mat(0,2) = myVertexArray[0].z();
-    mat(0,3) = 1;
-    mat(1,0) = myVertexArray[b].x();
-    mat(1,1) = myVertexArray[b].y();
-    mat(1,2) = myVertexArray[b].z();
-    mat(1,3) = 1;
-    mat(2,0) = myVertexArray[c].x();
-    mat(2,1) = myVertexArray[c].y();
-    mat(2,2) = myVertexArray[c].z();
-    mat(2,3) = 1;
-    mat(3,0) = myVertexArray[d].x();
-    mat(3,1) = myVertexArray[d].y();
-    mat(3,2) = myVertexArray[d].z();
-    mat(3,3) = 1;
+
+    for(int i=0; i<4; i++)
+    {
+        mat(i,0) = myVertexArray[i].x();
+        mat(i,1) = myVertexArray[i].y();
+        mat(i,2) = myVertexArray[i].z();
+        mat(i,3) = 1;
+    }
 
     //calcolo il determinante
     det = mat.determinant();
@@ -155,4 +173,27 @@ int MyDcel::returnCoplanarity(std::vector<Pointd> myVertexArray)
     if(det > 0.0) return 1;
     else if(det == 0.0) return 0;
     else return -1;
+}
+
+/**
+ * @brief MyDcel::addFourthPoint
+ */
+void MyDcel::addFourthPoint()
+{
+
+}
+
+
+/**
+ * @brief MyDcel::buildCH metodo che si occupa di costruire la ConvexHull in diversi step:
+ * 1. estrae 4 punti random dalla Dcel del modello in input (controllando che non siano complanari)
+ * 2. inizializza la Dcel con i primi 3 punti estratti
+ * 3. aggiunge il quarto punto costruendo il primo tetraedro
+ * TODO //finish description
+ */
+void MyDcel::buildCH()
+{
+    tetrahedronBuilder();
+    initializeDcel();
+    addFourthPoint();
 }
