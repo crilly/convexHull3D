@@ -23,9 +23,11 @@ void MyDcel::buildCH()
 {
     int coplanarity = tetrahedronBuilder();
     std::list<Dcel::HalfEdge*> list = initializeDcel(coplanarity);
-    std::list<Dcel::Face*> faceList = addFacesTetrahedron(list, vertexArray[d]);
+    std::list<Dcel::Face*> faceList = addFacesTetrahedron(list, vertexArray[3]);
     setTwins(faceList);
+
     bool miaoooo = true;
+
 }
 
 /**
@@ -90,12 +92,12 @@ int MyDcel::tetrahedronBuilder()
 std::list<Dcel::HalfEdge*> MyDcel::initializeDcel(int coplanarity)
 {
     //svuoto la Dcel
-    dcel->clear();
+    dcel->reset();
 
     //inizializzo la mia Dcel con i primi 4 vertici estratti
-    Dcel::Vertex *v1 = dcel->addVertex(vertexArray[a]);
-    Dcel::Vertex *v2 = dcel->addVertex(vertexArray[b]);
-    Dcel::Vertex *v3 = dcel->addVertex(vertexArray[c]);
+    Dcel::Vertex *v1 = dcel->addVertex(vertexArray[0]);
+    Dcel::Vertex *v2 = dcel->addVertex(vertexArray[1]);
+    Dcel::Vertex *v3 = dcel->addVertex(vertexArray[2]);
 
     //aggiungo la prima faccia
     Dcel::Face *f = dcel->addFace();
