@@ -21,15 +21,17 @@ MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainWindow)
  */
 void MyDcel::buildCH()
 {
-    tetrahedronBuilder();
-    initializeDcel();
-    addFourthPoint();
+    int coplanarity = tetrahedronBuilder();
+    std::list<Dcel::HalfEdge*> list = initializeDcel(coplanarity);
+    std::list<Dcel::Face*> faceList = addFacesTetrahedron(list, vertexArray[d]);
+    setTwins(faceList);
+    bool miaoooo = true;
 }
 
 /**
  * @brief MyDcel::tetrahedronBuilder costruisce il primo tetraedro estraendo 4 punti random dalla dcel
  */
-void MyDcel::tetrahedronBuilder()
+int MyDcel::tetrahedronBuilder()
 {
     srand(time(NULL));
     auto endDcel = dcel->vertexEnd();
@@ -51,9 +53,14 @@ void MyDcel::tetrahedronBuilder()
         b = size/4 + rand()% (size/2 - size/4);
         c = size/2 + rand()% (size/4*3 - size/2);
         d = size/4*3 + rand()% (size - size/4*3 + 1);
-        printf("%d\t%d\t%d\t%d", a, b, c, d);
 
-        coplanarity = returnCoplanarity(vertexArray);
+        std::vector<Pointd> fourPoints;
+        fourPoints.push_back(vertexArray[a]);
+        fourPoints.push_back(vertexArray[b]);
+        fourPoints.push_back(vertexArray[c]);
+        fourPoints.push_back(vertexArray[d]);
+
+        coplanarity = returnCoplanarity(fourPoints);
 
     } while(coplanarity == 0);
 
@@ -73,12 +80,14 @@ void MyDcel::tetrahedronBuilder()
     temp = vertexArray[3];
     vertexArray[3] = vertexArray[d];
     vertexArray[d] = temp;
+
+    return coplanarity;
 }
 
 /**
  * @brief MyDcel::initializeDcel
  */
-void MyDcel::initializeDcel()
+std::list<Dcel::HalfEdge*> MyDcel::initializeDcel(int coplanarity)
 {
     //svuoto la Dcel
     dcel->clear();
@@ -87,7 +96,6 @@ void MyDcel::initializeDcel()
     Dcel::Vertex *v1 = dcel->addVertex(vertexArray[a]);
     Dcel::Vertex *v2 = dcel->addVertex(vertexArray[b]);
     Dcel::Vertex *v3 = dcel->addVertex(vertexArray[c]);
-    Dcel::Vertex *v4 = dcel->addVertex(vertexArray[d]);
 
     //aggiungo la prima faccia
     Dcel::Face *f = dcel->addFace();
@@ -155,7 +163,12 @@ void MyDcel::initializeDcel()
     hf3->setFace(f);
 
 
-    bool miao = true;
+    std::list<Dcel::HalfEdge*> halfEdgeList;
+    halfEdgeList.push_back(hf1);
+    halfEdgeList.push_back(hf2);
+    halfEdgeList.push_back(hf3);
+    return halfEdgeList;
+
 }
 
 /**
@@ -192,7 +205,75 @@ int MyDcel::returnCoplanarity(std::vector<Pointd> myVertexArray)
 /**
  * @brief MyDcel::addFourthPoint
  */
-void MyDcel::addFourthPoint()
+std::list<Dcel::Face*> MyDcel::addFacesTetrahedron(std::list<Dcel::HalfEdge*> list, Pointd newVertex)
 {
+    std::list<Dcel::Face*> faceList;
+    Dcel::Vertex *vertex = dcel->addVertex(newVertex);
 
+    for(auto halfEdgeIterator = list.begin(); halfEdgeIterator != list.end(); halfEdgeIterator++)
+    {
+        Dcel::Face *currentFace = dcel->addFace();
+        Dcel::HalfEdge *he1 = dcel->addHalfEdge();
+        Dcel::HalfEdge *he2 = dcel->addHalfEdge();
+        Dcel::HalfEdge *he3 = dcel->addHalfEdge();
+
+        he1->setToVertex((*halfEdgeIterator)->getFromVertex());
+        he1->setFromVertex((*halfEdgeIterator)->getToVertex());
+        he1->setNext(he2);
+        he1->setPrev(he3);
+        he1->setTwin((*halfEdgeIterator));
+        (*halfEdgeIterator)->setTwin(he1);
+
+        he2->setFromVertex(he1->getToVertex());
+        he2->setToVertex(vertex);
+        he2->setNext(he3);
+        he2->setPrev(he1);
+
+        he3->setFromVertex(vertex);
+        he3->setToVertex(he1->getFromVertex());
+        he3->setNext(he1);
+        he3->setPrev(he2);
+
+        (*halfEdgeIterator)->getToVertex()->setIncidentHalfEdge(he1);
+        (*halfEdgeIterator)->getFromVertex()->setIncidentHalfEdge(he2);
+        vertex->setIncidentHalfEdge(he3);
+        (vertex)->incrementCardinality();
+        (vertex)->incrementCardinality();
+
+        he1->getFromVertex()->incrementCardinality();
+        he1->getFromVertex()->incrementCardinality();
+        he1->getToVertex()->incrementCardinality();
+        he1->getToVertex()->incrementCardinality();
+
+        he1->setFace(currentFace);
+        he2->setFace(currentFace);
+        he3->setFace(currentFace);
+
+        currentFace->setOuterHalfEdge(he1);
+
+        faceList.push_back(currentFace);
+    }
+
+    return faceList;
+}
+
+void MyDcel::setTwins(std::list<Dcel::Face*> listFace)
+{
+    for(auto faceIterator = listFace.begin(); faceIterator != listFace.end(); faceIterator++)
+    {
+        auto next = std::next(faceIterator, 1);
+        Dcel::HalfEdge *nextFaceOuterHE;
+
+        Dcel::HalfEdge *faceOuterHE = (*faceIterator)->getOuterHalfEdge();
+        if(next == listFace.end())
+        {
+           nextFaceOuterHE = listFace.front()->getOuterHalfEdge();
+
+        } else {
+            nextFaceOuterHE = (*next)->getOuterHalfEdge();
+        }
+
+        nextFaceOuterHE->getNext()->setTwin(faceOuterHE->getPrev());
+        faceOuterHE->getPrev()->setTwin(nextFaceOuterHE->getNext());
+    }
 }
