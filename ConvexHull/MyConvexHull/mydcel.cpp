@@ -22,9 +22,11 @@ MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainWindow)
 void MyDcel::buildCH()
 {
     int coplanarity = tetrahedronBuilder();
-    std::list<Dcel::HalfEdge*> list = initializeDcel(coplanarity);
-    std::list<Dcel::Face*> faceList = addFacesTetrahedron(list, vertexArray[3]);
-    setTwins(faceList);
+    std::list<Dcel::HalfEdge*> list = initializeTetrahedron(coplanarity);
+    facesList = addFacesTetrahedron(list, vertexArray[3]);
+    setTwins(facesList);
+    MyConflictGraph conflictGraph(dcel, vertexArray);
+    conflictGraph.initializeCG();
 
     bool miaoooo = true;
 
@@ -48,9 +50,10 @@ int MyDcel::tetrahedronBuilder()
 
     size = vertexArray.size();
 
+    //estraggo random 4 punti dividendo in 4 parti il vettore dei vertici (estraggo un punto in ognuno dei 4 range)
+    //finché i punti non sono complanari
     do
     {
-        //estraggo 4 vertici random dividendo il numero totale di vertici in 4 parti
         a = rand() % size/4;
         b = size/4 + rand()% (size/2 - size/4);
         c = size/2 + rand()% (size/4*3 - size/2);
@@ -89,7 +92,7 @@ int MyDcel::tetrahedronBuilder()
 /**
  * @brief MyDcel::initializeDcel
  */
-std::list<Dcel::HalfEdge*> MyDcel::initializeDcel(int coplanarity)
+std::list<Dcel::HalfEdge*> MyDcel::initializeTetrahedron(int coplanarity)
 {
     //svuoto la Dcel
     dcel->reset();
@@ -102,7 +105,7 @@ std::list<Dcel::HalfEdge*> MyDcel::initializeDcel(int coplanarity)
     //aggiungo la prima faccia
     Dcel::Face *f = dcel->addFace();
 
-    //aggiungo gli half-edges
+    //aggiungo i primi 3 half-edges
     Dcel::HalfEdge *hf1 = dcel->addHalfEdge();
     Dcel::HalfEdge *hf2 = dcel->addHalfEdge();
     Dcel::HalfEdge *hf3 = dcel->addHalfEdge();
@@ -164,7 +167,7 @@ std::list<Dcel::HalfEdge*> MyDcel::initializeDcel(int coplanarity)
     hf2->setFace(f);
     hf3->setFace(f);
 
-
+    //inserisco i miei primi 3 half-edges in una lista di half-edge (mi sarà più comodo più avanti)
     std::list<Dcel::HalfEdge*> halfEdgeList;
     halfEdgeList.push_back(hf1);
     halfEdgeList.push_back(hf2);
@@ -207,9 +210,10 @@ int MyDcel::returnCoplanarity(std::vector<Pointd> myVertexArray)
 /**
  * @brief MyDcel::addFourthPoint
  */
-std::list<Dcel::Face*> MyDcel::addFacesTetrahedron(std::list<Dcel::HalfEdge*> list, Pointd newVertex)
+std::vector<Dcel::Face*> MyDcel::addFacesTetrahedron(std::list<Dcel::HalfEdge*> list, Pointd newVertex)
 {
-    std::list<Dcel::Face*> faceList;
+    //inizializzo una lista di facce che mi servirà per settare correttamente i twin del tetraedro
+    std::vector<Dcel::Face*> faceList;
     Dcel::Vertex *vertex = dcel->addVertex(newVertex);
 
     for(auto halfEdgeIterator = list.begin(); halfEdgeIterator != list.end(); halfEdgeIterator++)
@@ -259,7 +263,7 @@ std::list<Dcel::Face*> MyDcel::addFacesTetrahedron(std::list<Dcel::HalfEdge*> li
     return faceList;
 }
 
-void MyDcel::setTwins(std::list<Dcel::Face*> listFace)
+void MyDcel::setTwins(std::vector<Dcel::Face*> listFace)
 {
     for(auto faceIterator = listFace.begin(); faceIterator != listFace.end(); faceIterator++)
     {
@@ -269,7 +273,7 @@ void MyDcel::setTwins(std::list<Dcel::Face*> listFace)
         Dcel::HalfEdge *faceOuterHE = (*faceIterator)->getOuterHalfEdge();
         if(next == listFace.end())
         {
-           nextFaceOuterHE = listFace.front()->getOuterHalfEdge();
+            nextFaceOuterHE = listFace.front()->getOuterHalfEdge();
 
         } else {
             nextFaceOuterHE = (*next)->getOuterHalfEdge();

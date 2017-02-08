@@ -49,7 +49,8 @@ HEADERS += \
     lib/common/common.h \
     common.h \
     lib/common/serialize.h \
-    MyConvexHull/mydcel.h
+    MyConvexHull/mydcel.h \
+    MyConvexHull/myconflictgraph.h
 
 SOURCES += \
     GUI/managers/dcelmanager.cpp \
@@ -64,7 +65,8 @@ SOURCES += \
     lib/dcel/drawable_dcel.cpp \
     common.cpp \
     main.cpp \
-    MyConvexHull/mydcel.cpp
+    MyConvexHull/mydcel.cpp \
+    MyConvexHull/myconflictgraph.cpp
 
 FORMS += \
     GUI/managers/dcelmanager.ui \
