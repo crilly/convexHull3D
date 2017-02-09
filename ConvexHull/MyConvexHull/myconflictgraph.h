@@ -14,15 +14,15 @@ public:
     std::vector<Dcel::Face*> facesList;
     std::vector<Pointd> vertexArray;
     MyConflictGraph(DrawableDcel*, std::vector<Pointd>);
-    std::map<Dcel::Face*, std::set<Dcel::Vertex*>> conflictVertices;
-    std::map<Dcel::Vertex*, std::set<Dcel::Face*>> conflictFaces;
+    std::map<Dcel::Face*, std::set<Pointd>*> conflictFaces;
+    std::map<Pointd, std::set<Dcel::Face*>*> conflictVertices;
     void initializeCG();
 
 
 private:
     void createMatrixForFace(int, Eigen::Matrix4d &);
-    void addFaceToVConflict(Dcel::Vertex *, Dcel::Face *);
-    void addVertexToFConflict(Dcel::Face *, Dcel::Vertex *);
+    void addFaceToVConflict(Pointd &, Dcel::Face *);
+    void addVertexToFConflict(Dcel::Face *, Pointd &);
 };
 
 #endif // MYCONFLICTGRAPH_H
