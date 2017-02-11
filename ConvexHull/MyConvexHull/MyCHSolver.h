@@ -9,8 +9,9 @@
 #include <GUI/mainwindow.h>
 #include <eigen3/Eigen/Dense>
 #include <MyConvexHull/myconflictgraph.h>
+#include <algorithm>
 
-class MyDcel
+class MyCHSolver
 {
 private:
     DrawableDcel *dcel;
@@ -19,13 +20,14 @@ private:
     double det = 0.0;    
 
     int returnCoplanarity(std::vector<Pointd>);
-    int tetrahedronBuilder();
+    int extractFourPoints();
     std::list<Dcel::HalfEdge*> initializeTetrahedron(int);
     std::vector<Dcel::Face*> addFacesTetrahedron(std::list<Dcel::HalfEdge*>, Pointd);
     void setTwins(std::vector<Dcel::Face*>);
+    void randomizeVertexArray();
 
 public:
-    MyDcel(DrawableDcel *dcel, MainWindow *mainWindow);
+    MyCHSolver(DrawableDcel *dcel, MainWindow *mainWindow);
     void buildCH();
     std::vector<Dcel::Face*> facesList;
     std::vector<Pointd> vertexArray;

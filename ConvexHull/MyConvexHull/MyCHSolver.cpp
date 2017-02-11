@@ -1,11 +1,11 @@
-#include "mydcel.h"
+#include "MyCHSolver.h"
 
 /**
- * @brief MyDcel::MyDcel costruttore della classe principale
+ * @brief MyCHSolver::MyCHSolver costruttore della classe principale
  * @param dcel consiste della dcel dei punti del modello 3D in input
  * @param mainwindow
  */
-MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainWindow)
+MyCHSolver::MyCHSolver(DrawableDcel *dcel, MainWindow *mainWindow)
 {
     this->dcel = dcel;
     this->mainWindow = mainWindow;
@@ -13,20 +13,27 @@ MyDcel::MyDcel(DrawableDcel *dcel, MainWindow *mainWindow)
 
 
 /**
- * @brief MyDcel::buildCH metodo che si occupa di costruire la ConvexHull in diversi step:
+ * @brief MyCHSolver::buildCH è il mio main method che si occupa di costruire la ConvexHull in diversi step:
  *      1. estrae 4 punti random dalla Dcel del modello in input (controllando che non siano complanari)
  *      2. inizializza la Dcel con i primi 3 punti estratti
- *      3. aggiunge il quarto punto costruendo il primo tetraedro
- *      TODO //finish description
+ *      3. aggiunge il quarto punto costruendo il primo tetraedro (settando rispettivi half-edges, twind, faces ecc.
+ *      4. a partire dal tetraedro, inizializzo il mio conflict graph per tenere traccia delle facce e vertici in conflitto
+ *      5. elimino i 4 vertici del tetraedro dal mio vettore di vertici (Pointd) e chiamo la funzione shuffle per disordinare i punti
+ *      6. scorrendo tutti i punti rimanenti, controllo per ognuno quale sia il suo orizzonte e aggiorno la Dcel (quindi la CH)
  */
-void MyDcel::buildCH()
+void MyCHSolver::buildCH()
 {
-    int coplanarity = tetrahedronBuilder();
+    //estraggo i primi 4 punti
+    int coplanarity = extractFourPoints();
+
     std::list<Dcel::HalfEdge*> list = initializeTetrahedron(coplanarity);
     facesList = addFacesTetrahedron(list, vertexArray[3]);
     setTwins(facesList);
+
+    //inizializzo il conflict graph
     MyConflictGraph conflictGraph(dcel, vertexArray);
     conflictGraph.initializeCG();
+    randomizeVertexArray();
 
     bool miaoooo = true;
 
@@ -35,16 +42,15 @@ void MyDcel::buildCH()
 /**
  * @brief MyDcel::tetrahedronBuilder costruisce il primo tetraedro estraendo 4 punti random dalla dcel
  */
-int MyDcel::tetrahedronBuilder()
+int MyCHSolver::extractFourPoints()
 {
     srand(time(NULL));
-    auto endDcel = dcel->vertexEnd();
     int coplanarity, size = 0;
 
-    //popolo un vettore con le coordinate dei vertici della DCEL in input
-    for(auto beginDcel = dcel->vertexBegin(); beginDcel != endDcel; ++beginDcel)
+    //popolo un vettore di Pointd con le coordinate dei vertici della DCEL in input
+    for(auto vertexIterator = dcel->vertexBegin(); vertexIterator != dcel->vertexEnd(); ++vertexIterator)
     {
-        Dcel::Vertex *v = *beginDcel;
+        Dcel::Vertex *v = *vertexIterator;
         vertexArray.push_back(v->getCoordinate());
     }
 
@@ -70,34 +76,27 @@ int MyDcel::tetrahedronBuilder()
     } while(coplanarity == 0);
 
     //posiziono i 4 punti estratti nelle prime 4 posizioni del mio array (sarà più comodo scorrere tutti gli altri punti in seguito)
-    Pointd temp = vertexArray[0];
-    vertexArray[0] = vertexArray[a];
-    vertexArray[a] = temp;
-
-    temp = vertexArray[1];
-    vertexArray[1] = vertexArray[b];
-    vertexArray[b] = temp;
-
-    temp = vertexArray[2];
-    vertexArray[2] = vertexArray[c];
-    vertexArray[c] = temp;
-
-    temp = vertexArray[3];
-    vertexArray[3] = vertexArray[d];
-    vertexArray[d] = temp;
+    std::swap(vertexArray[0], vertexArray[a]);
+    std::swap(vertexArray[1], vertexArray[b]);
+    std::swap(vertexArray[2], vertexArray[c]);
+    std::swap(vertexArray[3], vertexArray[d]);
 
     return coplanarity;
 }
 
 /**
- * @brief MyDcel::initializeDcel
+ * @brief MyCHSolver::initializeTetrahedron questo metodo mi permette di costruire in maniera corretta la prima faccia del tetraedro
+ *          con annessi 3 vertici e 3 half-edges grazie al segno del determinante calcolato fra i primi 4 vertici. Infatti, se
+ *          il determinante è < 0 allora dobbiamo settare le proprietà (next, fromVertex ecc) in un modo, altrimenti in verso opposto.
+ * @param coplanarity mi serve per tenere il segno del determinante (< 0 oppure > 0)
+ * @return torna una lista di half-edges che mi sarà utile per settare in maniera corretta e più semplice i twin degli half-edges
  */
-std::list<Dcel::HalfEdge*> MyDcel::initializeTetrahedron(int coplanarity)
+std::list<Dcel::HalfEdge*> MyCHSolver::initializeTetrahedron(int coplanarity)
 {
     //svuoto la Dcel
     dcel->reset();
 
-    //inizializzo la mia Dcel con i primi 4 vertici estratti
+    //inizializzo la mia Dcel con i primi 3 vertici estratti
     Dcel::Vertex *v1 = dcel->addVertex(vertexArray[0]);
     Dcel::Vertex *v2 = dcel->addVertex(vertexArray[1]);
     Dcel::Vertex *v3 = dcel->addVertex(vertexArray[2]);
@@ -110,10 +109,27 @@ std::list<Dcel::HalfEdge*> MyDcel::initializeTetrahedron(int coplanarity)
     Dcel::HalfEdge *hf2 = dcel->addHalfEdge();
     Dcel::HalfEdge *hf3 = dcel->addHalfEdge();
 
-    //se il determinante è > 0 allora dobbiamo muoverci in senso antiorario
+    //se il determinante è > 0 allora per preservare il senso antiorario, dobbiamo settare le proprietà nel seguente modo
     if(coplanarity == 1)
     {
-        hf1->setFromVertex(v1);
+        hf1->setFromVertex(v1); hf1->setFromVertex(v1);
+        hf1->setToVertex(v2);
+        hf1->setNext(hf2);
+        hf1->setPrev(hf3);
+
+        hf2->setFromVertex(v2);
+        hf2->setToVertex(v3);
+        hf2->setNext(hf3);
+        hf2->setPrev(hf1);
+
+        hf3->setFromVertex(v3);
+        hf3->setToVertex(v1);
+        hf3->setNext(hf1);
+        hf3->setPrev(hf2);
+
+        v1->setIncidentHalfEdge(hf1);
+        v2->setIncidentHalfEdge(hf2);
+        v3->setIncidentHalfEdge(hf3);
         hf1->setToVertex(v2);
         hf1->setNext(hf2);
         hf1->setPrev(hf3);
@@ -132,7 +148,7 @@ std::list<Dcel::HalfEdge*> MyDcel::initializeTetrahedron(int coplanarity)
         v2->setIncidentHalfEdge(hf2);
         v3->setIncidentHalfEdge(hf3);
 
-    } else if(coplanarity == -1) //altrimenti ci muoviamo in senso orario
+    } else if(coplanarity == -1) //altrimenti in senso opposto
     {
         hf1->setFromVertex(v2);
         hf1->setToVertex(v1);
@@ -154,7 +170,7 @@ std::list<Dcel::HalfEdge*> MyDcel::initializeTetrahedron(int coplanarity)
         v3->setIncidentHalfEdge(hf3);
     }
 
-    //setto la cardinalità di ciascun vertice
+    //setto la cardinalità di ciascun vertice (corrisponde al numero di half-edges connessi ad esso)
     v1->setCardinality(2);
     v2->setCardinality(2);
     v3->setCardinality(2);
@@ -167,21 +183,23 @@ std::list<Dcel::HalfEdge*> MyDcel::initializeTetrahedron(int coplanarity)
     hf2->setFace(f);
     hf3->setFace(f);
 
-    //inserisco i miei primi 3 half-edges in una lista di half-edge (mi sarà più comodo più avanti)
+    //inserisco i miei primi 3 half-edges in una lista di half-edge (mi sarà più comodo più avanti per i twin)
     std::list<Dcel::HalfEdge*> halfEdgeList;
     halfEdgeList.push_back(hf1);
     halfEdgeList.push_back(hf2);
     halfEdgeList.push_back(hf3);
     return halfEdgeList;
-
 }
 
 /**
- * @brief MyDcel::returnCoplanarity
- * @param myVertexArray
- * @return
+ * @brief MyCHSolver::returnCoplanarity metodo che, presi 4 punti, mi rende 0 se i punti sono complanari, 1 o -1 se i punti non sono
+ *          complanari e il segno mi dice in quale semispazio (sinistro o destro) sta il quarto punto rispetto al semipiano formato
+ *          dagli altri 3 assieme
+ * @param myVertexArray vettore di Pointd che memorizza tutti i vertici del modello in input (le prime 4 posizioni sono occupate proprio
+ *          dai 4 punti di interesse)
+ * @return 0, 1 o -1
  */
-int MyDcel::returnCoplanarity(std::vector<Pointd> myVertexArray)
+int MyCHSolver::returnCoplanarity(std::vector<Pointd> myVertexArray)
 {
     Eigen::Matrix4d mat;
 
@@ -196,33 +214,42 @@ int MyDcel::returnCoplanarity(std::vector<Pointd> myVertexArray)
     //calcolo il determinante
     det = mat.determinant();
 
-    //se il determinante è compreso in questo intervallo, i punti sono complanari e resetto il valore del determinante
+    //se il determinante è compreso in questo intervallo, i punti sono complanari e resetto il valore del determinante per comodità
     if(det > - std::numeric_limits<double>::epsilon() && det < std::numeric_limits<double>::epsilon())
     {
         det = 0.0;
     }
 
-    if(det > 0.0) return 1;
-    else if(det == 0.0) return 0;
+    if(det == 0.0) return 0;
+    else if(det > 0.0) return 1;
     else return -1;
 }
 
 /**
- * @brief MyDcel::addFourthPoint
+ * @brief MyCHSolver::addFacesTetrahedron questo metodo permette di settare correttamente le rimanenti 3 facce del tetraedro
+ *          con annessi half-edges e vertici
+ * @param list mi servo della lista dei primi 3 half-edge creati e inseriti in un vettore (poichè andrò a eseguire un ciclo basandomi
+ *          sul numero di half-edges iniziale e non posso basarmi sul numero di half-edge nella Dcel perchè quello aumenta ad ogni iterazione)
+ * @param newVertex è il quarto vertice da aggiungere per chiudere l'inizializzazione del tetraedro, corrisponde al quarto punto estratto
+ * @return torno un vettore di facce contenente le nuove tre facce appena create (verrà utilizzato per settare correttamente i twin)
  */
-std::vector<Dcel::Face*> MyDcel::addFacesTetrahedron(std::list<Dcel::HalfEdge*> list, Pointd newVertex)
+std::vector<Dcel::Face*> MyCHSolver::addFacesTetrahedron(std::list<Dcel::HalfEdge*> list, Pointd newVertex)
 {
     //inizializzo una lista di facce che mi servirà per settare correttamente i twin del tetraedro
     std::vector<Dcel::Face*> faceList;
+    //aggiungo il mio quarto punto alla Dcel
     Dcel::Vertex *vertex = dcel->addVertex(newVertex);
 
+    //ciclo per i primi 3 half-edge precedentemente inseriti
     for(auto halfEdgeIterator = list.begin(); halfEdgeIterator != list.end(); halfEdgeIterator++)
     {
+        //creo una nuova faccia e i 3 half-edges corrispondenti
         Dcel::Face *currentFace = dcel->addFace();
         Dcel::HalfEdge *he1 = dcel->addHalfEdge();
         Dcel::HalfEdge *he2 = dcel->addHalfEdge();
         Dcel::HalfEdge *he3 = dcel->addHalfEdge();
 
+        //setto tutte le proprietà necessarie per ogni half-edge
         he1->setToVertex((*halfEdgeIterator)->getFromVertex());
         he1->setFromVertex((*halfEdgeIterator)->getToVertex());
         he1->setNext(he2);
@@ -257,29 +284,53 @@ std::vector<Dcel::Face*> MyDcel::addFacesTetrahedron(std::list<Dcel::HalfEdge*> 
 
         currentFace->setOuterHalfEdge(he1);
 
+        //inserisco la nuova faccia nel vettore di facce
         faceList.push_back(currentFace);
     }
 
     return faceList;
 }
 
-void MyDcel::setTwins(std::vector<Dcel::Face*> listFace)
+/**
+ * @brief MyCHSolver::setTwins metodo che mi permette di settare i twin per ogni half-edge presente nel tetraedro (sono in tutto 12)
+ * @param listFace vettore che consta delle ultime 3 facce aggiunte alla Dcel
+ */
+void MyCHSolver::setTwins(std::vector<Dcel::Face*> listFace)
 {
+    //ciclo iterato sulla dimensione della listFace (sono 3 facce)
     for(auto faceIterator = listFace.begin(); faceIterator != listFace.end(); faceIterator++)
     {
+        //prendo la faccia successiva a quella in esame ora
         auto next = std::next(faceIterator, 1);
-        Dcel::HalfEdge *nextFaceOuterHE;
-
+        Dcel::HalfEdge *nextFaceOuterHE;    
+        //recupero l'outerHalfEdge della faccia corrente
         Dcel::HalfEdge *faceOuterHE = (*faceIterator)->getOuterHalfEdge();
+
+        //se sono arrivata all'ultima faccia, allora recupero l'outerHalfEdge della faccia iniziale
         if(next == listFace.end())
         {
             nextFaceOuterHE = listFace.front()->getOuterHalfEdge();
 
-        } else {
+        } else //altrimenti recupero l'outerHalfEdge della faccia successiva
+        {
             nextFaceOuterHE = (*next)->getOuterHalfEdge();
         }
 
+        //setto come twin l'outerHalfEdge della faccia attuale con quello della prossima faccia
         nextFaceOuterHE->getNext()->setTwin(faceOuterHE->getPrev());
         faceOuterHE->getPrev()->setTwin(nextFaceOuterHE->getNext());
     }
+}
+
+/**
+ * @brief MyCHSolver::randomizeVertexArray breve metodo che mi permette di eliminare dal mio vettore di vertici i vertici
+ *          facenti parte del tetraedro e di randomizzare i restanti vertici per andare a costruire la vera e propria CH
+ */
+void MyCHSolver::randomizeVertexArray()
+{
+    //elimino i primi 4 vertici dell'array, che sono quelli del tetraedro
+    vertexArray.erase(vertexArray.begin(), vertexArray.begin() + 4);
+
+    //randomizzo i punti restanti del vettore per andare a costruire il CH
+    std::random_shuffle(vertexArray.begin(), vertexArray.end());
 }

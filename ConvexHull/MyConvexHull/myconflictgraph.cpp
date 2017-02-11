@@ -18,6 +18,7 @@ MyConflictGraph::MyConflictGraph(DrawableDcel *dcel, std::vector<Pointd> vertexA
  * @param matrix riferimento alla matrice che vogliamo popolare (serve come indice del vettore di matrici "matrices")
  */
 void MyConflictGraph::createMatrixForFace(int faceID, Eigen::Matrix4d &matrix)
+
 {
     Dcel::HalfEdge *currentHE = dcel->getFace(faceID)->getOuterHalfEdge();
     for(int i = 0; i < 3; i++)

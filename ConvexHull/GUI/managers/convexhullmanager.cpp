@@ -59,8 +59,8 @@ void ConvexHullManager::on_convexHullPushButton_clicked() {
              * Begin Convex Hull Algorithm  *
              ********************************/
 
-            MyDcel mydcel(dcel, mainWindow);
-            mydcel.buildCH();
+            MyCHSolver myCHSolver(dcel, mainWindow);
+            myCHSolver.buildCH();
 
             /********************************
              * End Convex Hull Algorithm    *
