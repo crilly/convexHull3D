@@ -13,13 +13,13 @@ MyConflictGraph::MyConflictGraph(DrawableDcel *dcel, std::vector<Pointd> vertexA
 
 /**
  * @brief MyConflictGraph::createMatrixForFace questo metodo si occupa di inizializzare le prime 3 righe
- * della matrice corrispondenti alle coordinate dei 3 vertici della faccia passata con l'ID
+ *          della matrice corrispondenti alle coordinate dei 3 vertici della faccia passata con l'ID
  * @param faceID ID della faccia dalla quale prendere i vertici
  * @param matrix riferimento alla matrice che vogliamo popolare (serve come indice del vettore di matrici "matrices")
  */
 void MyConflictGraph::createMatrixForFace(int faceID, Eigen::Matrix4d &matrix)
-
 {
+    //parto dall'outerHE della faccia corrente e mi recupero le coordinate del suo fromVertex
     Dcel::HalfEdge *currentHE = dcel->getFace(faceID)->getOuterHalfEdge();
     for(int i = 0; i < 3; i++)
     {
@@ -27,8 +27,11 @@ void MyConflictGraph::createMatrixForFace(int faceID, Eigen::Matrix4d &matrix)
         matrix(i, 1) = currentHE->getFromVertex()->getCoordinate().y();
         matrix(i, 2) = currentHE->getFromVertex()->getCoordinate().z();
         matrix(i, 3) = 1;
+
+        //prendo il successivo half-edge rispetto a quello corrente
         currentHE = currentHE->getNext();
     }
+
     //setto l'ultima riga a zero per leggibilità
     matrix(3, 0) = 0;
     matrix(3, 1) = 0;
@@ -37,7 +40,7 @@ void MyConflictGraph::createMatrixForFace(int faceID, Eigen::Matrix4d &matrix)
 }
 
 /**
- * @brief MyConflictGraph::initializeCG
+ * @brief MyConflictGraph::initializeCG metodo che permette di inizializzare i conflictGraph dei vertici e delle facce
  */
 void MyConflictGraph::initializeCG()
 {
@@ -93,7 +96,6 @@ void MyConflictGraph::initializeCG()
  */
 void MyConflictGraph::addFaceToVConflict(Pointd &v, Dcel::Face *f)
 {
-
     //controllo se la mia chiave "f" esiste: se si, inserisco il vertice nel set di vertici
     if(conflictVertices.find(v) != conflictVertices.end())
     {
@@ -125,4 +127,25 @@ void MyConflictGraph::addVertexToFConflict(Dcel::Face *f, Pointd &v)
         myVerticesSet->insert(v);
         conflictFaces[f] = myVerticesSet;
     }
+}
+
+/**
+ * @brief MyConflictGraph::getVisibleFaces
+ * @param point
+ * @return
+ */
+std::set<Dcel::Face*>* MyConflictGraph::getFacesInConflict(const Pointd &vertex){
+
+    std::set<Dcel::Face*> *facesSet = conflictVertices[vertex];
+
+    // se non ha trovato elementi torno un set vuoto (può servirmi più avanti)
+    if(facesSet == nullptr)
+    {
+        facesSet = new std::set<Dcel::Face*>;
+
+        //inserisco il set di facce nella conflict list dei punti
+        conflictVertices[vertex]=facesSet;
+    }
+
+    return new std::set<Dcel::Face*>(*facesSet);
 }

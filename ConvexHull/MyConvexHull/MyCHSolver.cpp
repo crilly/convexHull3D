@@ -35,7 +35,26 @@ void MyCHSolver::buildCH()
     conflictGraph.initializeCG();
     randomizeVertexArray();
 
-    bool miaoooo = true;
+    std::vector<Dcel::HalfEdge*> horizon;
+
+    //per ciascun vertice rimasto del modello in input, calcolo il corrispettivo orizzonte e computo la nuova CH
+    for(auto iter = vertexArray.begin(); iter != vertexArray.end(); iter++)
+    {
+        std::set<Dcel::Face*> *visibleFaces = conflictGraph.getFacesInConflict(*iter);
+
+        if(!visibleFaces->empty())
+        {
+            horizon = computeHorizon(visibleFaces);
+            foreach (Dcel::HalfEdge* he, horizon) {
+                qDebug(" From: (%f %f %f) To: (%f %f %f)", he->getFromVertex()->getCoordinate().x(), he->getFromVertex()->getCoordinate().y(), he->getFromVertex()->getCoordinate().z(), he->getToVertex()->getCoordinate().x(), he->getToVertex()->getCoordinate().y(), he->getToVertex()->getCoordinate().z());
+            }
+            qDebug("------------------------------------------------------");
+            qDebug("------------------------------------------------------");
+        }
+        bool miaoooo = true;
+    }
+
+
 
 }
 
@@ -270,8 +289,8 @@ std::vector<Dcel::Face*> MyCHSolver::addFacesTetrahedron(std::list<Dcel::HalfEdg
         (*halfEdgeIterator)->getToVertex()->setIncidentHalfEdge(he1);
         (*halfEdgeIterator)->getFromVertex()->setIncidentHalfEdge(he2);
         vertex->setIncidentHalfEdge(he3);
-        (vertex)->incrementCardinality();
-        (vertex)->incrementCardinality();
+        vertex->incrementCardinality();
+        vertex->incrementCardinality();
 
         he1->getFromVertex()->incrementCardinality();
         he1->getFromVertex()->incrementCardinality();
@@ -302,7 +321,7 @@ void MyCHSolver::setTwins(std::vector<Dcel::Face*> listFace)
     {
         //prendo la faccia successiva a quella in esame ora
         auto next = std::next(faceIterator, 1);
-        Dcel::HalfEdge *nextFaceOuterHE;    
+        Dcel::HalfEdge *nextFaceOuterHE;
         //recupero l'outerHalfEdge della faccia corrente
         Dcel::HalfEdge *faceOuterHE = (*faceIterator)->getOuterHalfEdge();
 
@@ -333,4 +352,58 @@ void MyCHSolver::randomizeVertexArray()
 
     //randomizzo i punti restanti del vettore per andare a costruire il CH
     std::random_shuffle(vertexArray.begin(), vertexArray.end());
+}
+
+/**
+ * @brief MyCHSolver::computeHorizon
+ * @param vertex vertice attuale del quale calcolare l'orizzonte
+ * @return torno il vettore ordinato di half-edge dell'orizzonte
+ */
+std::vector<Dcel::HalfEdge*> MyCHSolver::computeHorizon(std::set<Dcel::Face*>* setOfFaces)
+{    
+    //mi recupero il set di facce relativo al conflict graph del vertice in input
+    //std::set<Dcel::Face*> *setOfFaces = conflictGraph.conflictVertices.at(vertex);
+    std::vector<Dcel::HalfEdge*> horizon;
+
+    Dcel::HalfEdge* firstHE;
+
+    //per tutte le facce nel conflict graph del vertice corrente, controllo quali fanno parte dell'orizzonte
+    for(auto iterator = setOfFaces->begin(); iterator != setOfFaces->end(); iterator++)
+    {
+        //scorro gli half-edge della faccia corrente. Se uno di loro ha il twin appartenente a una faccia non visibile dal punto
+        //allora quell'half-edge fa parte dell'orizzonte
+        for(auto i = (*iterator)->incidentHalfEdgeBegin(); i != (*iterator)->incidentHalfEdgeEnd(); i++)
+        {
+            //se la faccia del twind del mio half-edge corrente non è nella lista delle facce visibili dal vertice
+            //allora inserisco l'half-edge corrente nell'orizzonte (che è ancora disordinato)
+            auto element = setOfFaces->find((*i)->getTwin()->getFace());
+            if(element == setOfFaces->end())
+            {
+                firstHE = (*i)->getTwin();
+                break;
+                //horizon->push_back((*i)->getTwin());
+            }
+        }
+        //controllo se effettivamente è inizializzato
+        if(firstHE->getFromVertex() != nullptr) break;
+
+    }
+    horizon.push_back(firstHE);
+
+    Dcel::HalfEdge* next = firstHE->getNext()->getTwin();
+
+    while(next->getNext() != firstHE)
+    {
+        if(setOfFaces->find(next->getFace()) != setOfFaces->end())
+        {
+            horizon.push_back(next->getTwin());
+            next = next->getTwin();
+        } else {
+            next = next->getNext()->getTwin();
+        }
+    }
+
+
+        return horizon;
+
 }

@@ -16,8 +16,8 @@ public:
     MyConflictGraph(DrawableDcel*, std::vector<Pointd>);
     std::map<Dcel::Face*, std::set<Pointd>*> conflictFaces;
     std::map<Pointd, std::set<Dcel::Face*>*> conflictVertices;
-    void initializeCG();
-
+    void initializeCG();    
+    std::set<Dcel::Face*>* getFacesInConflict(const Pointd &);
 
 private:
     void createMatrixForFace(int, Eigen::Matrix4d &);

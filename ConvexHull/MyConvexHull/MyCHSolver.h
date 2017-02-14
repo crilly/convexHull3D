@@ -24,7 +24,8 @@ private:
     std::list<Dcel::HalfEdge*> initializeTetrahedron(int);
     std::vector<Dcel::Face*> addFacesTetrahedron(std::list<Dcel::HalfEdge*>, Pointd);
     void setTwins(std::vector<Dcel::Face*>);
-    void randomizeVertexArray();
+    void randomizeVertexArray();    
+    std::vector<Dcel::HalfEdge*> computeHorizon(std::set<Dcel::Face*>*);
 
 public:
     MyCHSolver(DrawableDcel *dcel, MainWindow *mainWindow);
