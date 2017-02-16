@@ -26,12 +26,16 @@ void MyCHSolver::buildCH()
     //estraggo i primi 4 punti
     int coplanarity = extractFourPoints();
 
+    //creo la prima faccia del tetraedro e rendo una lista dei primi 3 half-edge
     std::list<Dcel::HalfEdge*> list = initializeTetrahedron(coplanarity);
+    //aggiungo le altre 3 facce per chiudere il tetraedro
     facesList = addFacesTetrahedron(list, vertexArray[3]);
+    //setto correttamente tutti i twin del tetraedro
     setTwins(facesList);
 
     //inizializzo il conflict graph
     MyConflictGraph conflictGraph(dcel, vertexArray);
+    //inizializzo il conflict graph
     conflictGraph.initializeCG();
     randomizeVertexArray();
 
@@ -40,8 +44,10 @@ void MyCHSolver::buildCH()
     //per ciascun vertice rimasto del modello in input, calcolo il corrispettivo orizzonte e computo la nuova CH
     for(auto iter = vertexArray.begin(); iter != vertexArray.end(); iter++)
     {
+        //recupero il set di facce visibili dal vertice tramite un metodo d'appoggio
         std::set<Dcel::Face*> *visibleFaces = conflictGraph.getFacesInConflict(*iter);
 
+        //computo l'orizzonte solo se il set di facce visibili ha almeno un elemento, altrimenti il punto è interno al CH
         if(!visibleFaces->empty())
         {
             horizon = computeHorizon(visibleFaces);
@@ -55,16 +61,19 @@ void MyCHSolver::buildCH()
     }
 
 
-
 }
 
+
 /**
- * @brief MyDcel::tetrahedronBuilder costruisce il primo tetraedro estraendo 4 punti random dalla dcel
+ * @brief MyCHSolver::extractFourPoints estrae 4 punti random dalla dcel come vertici inziali del tetraedro
+ * @return torna 1 o -1 a seconda del segno della matrice (ovvero indica in quale semispazio si trova il quarto punto rispetto
+ *          al semipiano formato dai primi 3 punti)
  */
 int MyCHSolver::extractFourPoints()
 {
     srand(time(NULL));
     int coplanarity, size = 0;
+    std::vector<Pointd> fourPoints;
 
     //popolo un vettore di Pointd con le coordinate dei vertici della DCEL in input
     for(auto vertexIterator = dcel->vertexBegin(); vertexIterator != dcel->vertexEnd(); ++vertexIterator)
@@ -79,17 +88,19 @@ int MyCHSolver::extractFourPoints()
     //finché i punti non sono complanari
     do
     {
+        //estraggo 4 interi random che saranno l'indice del vettore che contiene i miei vertici
         a = rand() % size/4;
         b = size/4 + rand()% (size/2 - size/4);
         c = size/2 + rand()% (size/4*3 - size/2);
         d = size/4*3 + rand()% (size - size/4*3 + 1);
 
-        std::vector<Pointd> fourPoints;
-        fourPoints.push_back(vertexArray[a]);
-        fourPoints.push_back(vertexArray[b]);
-        fourPoints.push_back(vertexArray[c]);
-        fourPoints.push_back(vertexArray[d]);
+        //inserisco nel mio vettore provvisorio, nelle prime 4 posizioni, i miei 4 punti estratti
+        fourPoints[0] = vertexArray[a];
+        fourPoints[1] = vertexArray[b];
+        fourPoints[2] = vertexArray[c];
+        fourPoints[3] = vertexArray[d];
 
+        //checko la complanarità dei 4 punti
         coplanarity = returnCoplanarity(fourPoints);
 
     } while(coplanarity == 0);
@@ -102,6 +113,7 @@ int MyCHSolver::extractFourPoints()
 
     return coplanarity;
 }
+
 
 /**
  * @brief MyCHSolver::initializeTetrahedron questo metodo mi permette di costruire in maniera corretta la prima faccia del tetraedro
@@ -210,6 +222,7 @@ std::list<Dcel::HalfEdge*> MyCHSolver::initializeTetrahedron(int coplanarity)
     return halfEdgeList;
 }
 
+
 /**
  * @brief MyCHSolver::returnCoplanarity metodo che, presi 4 punti, mi rende 0 se i punti sono complanari, 1 o -1 se i punti non sono
  *          complanari e il segno mi dice in quale semispazio (sinistro o destro) sta il quarto punto rispetto al semipiano formato
@@ -222,6 +235,7 @@ int MyCHSolver::returnCoplanarity(std::vector<Pointd> myVertexArray)
 {
     Eigen::Matrix4d mat;
 
+    //popolo la matrice con le coordinate dei primi 4 punti
     for(int i=0; i<4; i++)
     {
         mat(i,0) = myVertexArray[i].x();
@@ -243,6 +257,7 @@ int MyCHSolver::returnCoplanarity(std::vector<Pointd> myVertexArray)
     else if(det > 0.0) return 1;
     else return -1;
 }
+
 
 /**
  * @brief MyCHSolver::addFacesTetrahedron questo metodo permette di settare correttamente le rimanenti 3 facce del tetraedro
@@ -310,6 +325,7 @@ std::vector<Dcel::Face*> MyCHSolver::addFacesTetrahedron(std::list<Dcel::HalfEdg
     return faceList;
 }
 
+
 /**
  * @brief MyCHSolver::setTwins metodo che mi permette di settare i twin per ogni half-edge presente nel tetraedro (sono in tutto 12)
  * @param listFace vettore che consta delle ultime 3 facce aggiunte alla Dcel
@@ -341,6 +357,7 @@ void MyCHSolver::setTwins(std::vector<Dcel::Face*> listFace)
     }
 }
 
+
 /**
  * @brief MyCHSolver::randomizeVertexArray breve metodo che mi permette di eliminare dal mio vettore di vertici i vertici
  *          facenti parte del tetraedro e di randomizzare i restanti vertici per andare a costruire la vera e propria CH
@@ -354,56 +371,58 @@ void MyCHSolver::randomizeVertexArray()
     std::random_shuffle(vertexArray.begin(), vertexArray.end());
 }
 
+
 /**
- * @brief MyCHSolver::computeHorizon
- * @param vertex vertice attuale del quale calcolare l'orizzonte
- * @return torno il vettore ordinato di half-edge dell'orizzonte
+ * @brief MyCHSolver::computeHorizon metodo che computa l'orizzonte per un punto
+ * @param setOfFaces insieme delle facce visibili dal punto in esame
+ * @return torna il vettore di half-edge che compongono l'orizzonte del punto
  */
 std::vector<Dcel::HalfEdge*> MyCHSolver::computeHorizon(std::set<Dcel::Face*>* setOfFaces)
 {    
-    //mi recupero il set di facce relativo al conflict graph del vertice in input
-    //std::set<Dcel::Face*> *setOfFaces = conflictGraph.conflictVertices.at(vertex);
     std::vector<Dcel::HalfEdge*> horizon;
-
     Dcel::HalfEdge* firstHE;
 
     //per tutte le facce nel conflict graph del vertice corrente, controllo quali fanno parte dell'orizzonte
-    for(auto iterator = setOfFaces->begin(); iterator != setOfFaces->end(); iterator++)
+    for(auto faceIterator = setOfFaces->begin(); faceIterator != setOfFaces->end(); faceIterator++)
     {
         //scorro gli half-edge della faccia corrente. Se uno di loro ha il twin appartenente a una faccia non visibile dal punto
         //allora quell'half-edge fa parte dell'orizzonte
-        for(auto i = (*iterator)->incidentHalfEdgeBegin(); i != (*iterator)->incidentHalfEdgeEnd(); i++)
+        for(auto halfEdgeIterator = (*faceIterator)->incidentHalfEdgeBegin(); halfEdgeIterator != (*faceIterator)->incidentHalfEdgeEnd(); halfEdgeIterator++)
         {
             //se la faccia del twind del mio half-edge corrente non è nella lista delle facce visibili dal vertice
             //allora inserisco l'half-edge corrente nell'orizzonte (che è ancora disordinato)
-            auto element = setOfFaces->find((*i)->getTwin()->getFace());
+            auto element = setOfFaces->find((*halfEdgeIterator)->getTwin()->getFace());
             if(element == setOfFaces->end())
             {
-                firstHE = (*i)->getTwin();
+                firstHE = (*halfEdgeIterator)->getTwin();
                 break;
-                //horizon->push_back((*i)->getTwin());
             }
         }
         //controllo se effettivamente è inizializzato
         if(firstHE->getFromVertex() != nullptr) break;
-
     }
+
+    //inserisco il l'half-edge di partenza nel vettore che conterrà l'horizon
     horizon.push_back(firstHE);
 
+    //inizializzo un half-edge che mi servirà per scorrere il boundary dell'orizzonte
     Dcel::HalfEdge* next = firstHE->getNext()->getTwin();
 
+    //finchè non sono arrivata all'half-edge iniziale (quindi non ho chiuso il giro)
     while(next->getNext() != firstHE)
     {
+        //se la faccia dell'half-edge corrente fa parte dell'insieme delle facce visibili, allora quell'HE fa parte dell'orizzonte
         if(setOfFaces->find(next->getFace()) != setOfFaces->end())
         {
+            //inserisco l'HE attuale nell'orizzonte
             horizon.push_back(next->getTwin());
+            //l'HE attuale diventa il twin di quello appena pushato nell'orizzonte
             next = next->getTwin();
-        } else {
+        } else { //se la faccia non è tra quelle visibili
+            //l'HE attuale diventa il twin del next di quello precedente
             next = next->getNext()->getTwin();
         }
     }
 
-
-        return horizon;
-
+    return horizon;
 }
