@@ -100,7 +100,7 @@ void MyConflictGraph::addFaceToVConflict(Pointd &v, Dcel::Face *f)
         conflictVertices[v] =  new std::set<Dcel::Face*>();;
 
     } //altrimenti istanzio il set di vertici, aggiungo il vertice al set e infine inserisco faccia e vertice nella mappa
-        conflictVertices->insert(f);
+        conflictVertices[v]->insert(f);
 }
 
 /**
@@ -116,7 +116,7 @@ void MyConflictGraph::addVertexToFConflict(Dcel::Face *f, Pointd &v)
         conflictFaces[f] = new std::set<Pointd>();
     }
      //altrimenti istanzio il set di vertici, aggiungo il vertice al set e infine inserisco faccia e vertice nella mappa
-      conflictFaces->insert(v);
+      conflictFaces[f]->insert(v);
 }
 
 /**
