@@ -40,8 +40,8 @@ void MyCHSolver::buildCH()
     randomizeVertexArray();
 
     if(showPhases){
-            dcel->update();
-            this->mainWindow->updateGlCanvas();
+        dcel->update();
+        this->mainWindow->updateGlCanvas();
     }
 
     //inizializzo il conflict graph
@@ -88,8 +88,8 @@ void MyCHSolver::buildCH()
             }
 
             if(showPhases){
-                    dcel->update();
-                    this->mainWindow->updateGlCanvas();
+                dcel->update();
+                this->mainWindow->updateGlCanvas();
             }
         }
         conflictGraph.deleteVertexFromCG(vertex);
@@ -412,13 +412,16 @@ std::vector<Dcel::HalfEdge*> MyCHSolver::computeHorizon(std::set<Dcel::Face*>* s
         //allora quell'half-edge fa parte dell'orizzonte
         for(auto halfEdgeIterator = (*faceIterator)->incidentHalfEdgeBegin(); halfEdgeIterator != (*faceIterator)->incidentHalfEdgeEnd(); halfEdgeIterator++)
         {
-            //se la faccia del twind del mio half-edge corrente non è nella lista delle facce visibili dal vertice
-            //allora inserisco l'half-edge corrente nell'orizzonte (che è ancora disordinato)
-            auto element = setOfFaces->find((*halfEdgeIterator)->getTwin()->getFace());
-            if(element == setOfFaces->end())
+            if((*halfEdgeIterator)->getTwin() != nullptr)
             {
-                firstHE = (*halfEdgeIterator)->getTwin();
-                break;
+                //se la faccia del twin del mio half-edge corrente non è nella lista delle facce visibili dal vertice
+                //allora inserisco l'half-edge corrente nell'orizzonte (che è ancora disordinato)
+                auto element = setOfFaces->find((*halfEdgeIterator)->getTwin()->getFace());
+                if(element == setOfFaces->end())
+                {
+                    firstHE = (*halfEdgeIterator)->getTwin();
+                    break;
+                }
             }
         }
         //controllo se effettivamente è inizializzato
@@ -473,28 +476,28 @@ std::vector<Dcel::HalfEdge*> MyCHSolver::calcHorizon(std::set<Dcel::Face*>* &fac
 
     }
 
-     horizon.push_back(horizonStartHE->getTwin());
+    horizon.push_back(horizonStartHE->getTwin());
 
-     Dcel::HalfEdge* startHE = horizonStartHE;
+    Dcel::HalfEdge* startHE = horizonStartHE;
 
-     do {
+    do {
 
-         if (facesSet->count(startHE->getNext()->getTwin()->getFace()) == 1 ) {
-             startHE = startHE->getNext()->getTwin();
-         } else {
-             horizon.push_front(startHE->getNext()->getTwin());
-             startHE = startHE->getNext();
-         }
-
-
-     } while (startHE->getNext() != horizonStartHE && startHE->getNext()->getTwin()->getNext() != horizonStartHE);
+        if (facesSet->count(startHE->getNext()->getTwin()->getFace()) == 1 ) {
+            startHE = startHE->getNext()->getTwin();
+        } else {
+            horizon.push_front(startHE->getNext()->getTwin());
+            startHE = startHE->getNext();
+        }
 
 
- //   foreach (Dcel::HalfEdge* he, horizon) {
- //       qDebug(" From: (%f %f %f) To: (%f %f %f)", he->getFromVertex()->getCoordinate().x(), he->getFromVertex()->getCoordinate().y(), he->getFromVertex()->getCoordinate().z(), he->getToVertex()->getCoordinate().x(), he->getToVertex()->getCoordinate().y(), he->getToVertex()->getCoordinate().z());
-//    }
-  //  qDebug("------------------------------------------------------");
- //   qDebug("------------------------------------------------------");
+    } while (startHE->getNext() != horizonStartHE && startHE->getNext()->getTwin()->getNext() != horizonStartHE);
+
+
+    //   foreach (Dcel::HalfEdge* he, horizon) {
+    //       qDebug(" From: (%f %f %f) To: (%f %f %f)", he->getFromVertex()->getCoordinate().x(), he->getFromVertex()->getCoordinate().y(), he->getFromVertex()->getCoordinate().z(), he->getToVertex()->getCoordinate().x(), he->getToVertex()->getCoordinate().y(), he->getToVertex()->getCoordinate().z());
+    //    }
+    //  qDebug("------------------------------------------------------");
+    //   qDebug("------------------------------------------------------");
 
     std::vector<Dcel::HalfEdge*> v{ std::begin(horizon), std::end(horizon) };
     return v;
