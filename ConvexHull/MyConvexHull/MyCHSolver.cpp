@@ -24,6 +24,10 @@ MyCHSolver::MyCHSolver(DrawableDcel *dcel, MainWindow *mainWindow, bool const &s
  */
 void MyCHSolver::buildCH()
 {
+
+    /////test
+    int count = 0;
+
     //estraggo i primi 4 punti
     int coplanarity = extractFourPoints();
 
@@ -31,7 +35,7 @@ void MyCHSolver::buildCH()
     std::vector<Dcel::HalfEdge*> list = initializeTetrahedron(coplanarity);
 
     //aggiungo le altre 3 facce per chiudere il tetraedro
-    std::vector<Dcel::Face*> facesTetrahedron = addFaces(list, vertexArray[3]);
+    addFaces(list, vertexArray[3]);
 
     randomizeVertexArray();
 
@@ -45,6 +49,13 @@ void MyCHSolver::buildCH()
     //inizializzo il conflict graph
     conflictGraph.initializeCG();
 
+    ///////////////////////////
+    ///
+    ///         FIN QUI TUTTO BENE
+    ///
+    /// /////////////////////////
+
+
     std::vector<Dcel::HalfEdge*> horizon;
 
     //per ciascun vertice rimasto del modello in input, calcolo il corrispettivo orizzonte e computo la nuova CH
@@ -57,7 +68,7 @@ void MyCHSolver::buildCH()
         //computo l'orizzonte solo se il set di facce visibili ha almeno un elemento, altrimenti il punto è interno al CH
         if(!visibleFaces->empty())
         {
-            horizon = computeHorizon(visibleFaces);
+            horizon = calcHorizon(visibleFaces);
 
             std::map<Dcel::HalfEdge*, std::set<Pointd>*> mapOfVerticesForCG = conflictGraph.lookForVerticesInConflict(horizon);
 
@@ -82,6 +93,8 @@ void MyCHSolver::buildCH()
             }
         }
         conflictGraph.deleteVertexFromCG(vertex);
+        qDebug("Iterazione %d", count);
+        count++;
     }
 }
 
@@ -436,6 +449,58 @@ std::vector<Dcel::HalfEdge*> MyCHSolver::computeHorizon(std::set<Dcel::Face*>* s
 
     return horizon;
 }
+
+std::vector<Dcel::HalfEdge*> MyCHSolver::calcHorizon(std::set<Dcel::Face*>* &facesSet) {
+
+    Dcel::HalfEdge* horizonStartHE;
+    std::list<Dcel::HalfEdge*> horizon;
+    bool stop = false;
+
+    for (auto currentFace = facesSet->begin(); currentFace != facesSet->end() && stop != true ; ++currentFace) {
+
+        for (auto currentHE = (*currentFace)->incidentHalfEdgeBegin(); currentHE != (*currentFace)->incidentHalfEdgeEnd() && stop != true; ++currentHE) {
+
+            if ( (*currentHE)->getTwin() != nullptr ) {
+                Dcel::HalfEdge* twin = (*currentHE)->getTwin();
+                Dcel::Face* twinFace = twin->getFace();
+
+                if (facesSet->count(twinFace) == 0 && facesSet->count((*currentHE)->getFace()) != 0) {
+                    horizonStartHE = (*currentHE);
+                    stop = true;
+                }
+            }
+        }
+
+    }
+
+     horizon.push_back(horizonStartHE->getTwin());
+
+     Dcel::HalfEdge* startHE = horizonStartHE;
+
+     do {
+
+         if (facesSet->count(startHE->getNext()->getTwin()->getFace()) == 1 ) {
+             startHE = startHE->getNext()->getTwin();
+         } else {
+             horizon.push_front(startHE->getNext()->getTwin());
+             startHE = startHE->getNext();
+         }
+
+
+     } while (startHE->getNext() != horizonStartHE && startHE->getNext()->getTwin()->getNext() != horizonStartHE);
+
+
+ //   foreach (Dcel::HalfEdge* he, horizon) {
+ //       qDebug(" From: (%f %f %f) To: (%f %f %f)", he->getFromVertex()->getCoordinate().x(), he->getFromVertex()->getCoordinate().y(), he->getFromVertex()->getCoordinate().z(), he->getToVertex()->getCoordinate().x(), he->getToVertex()->getCoordinate().y(), he->getToVertex()->getCoordinate().z());
+//    }
+  //  qDebug("------------------------------------------------------");
+ //   qDebug("------------------------------------------------------");
+
+    std::vector<Dcel::HalfEdge*> v{ std::begin(horizon), std::end(horizon) };
+    return v;
+
+}
+
 
 
 /**

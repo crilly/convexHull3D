@@ -92,15 +92,22 @@ void MyConflictGraph::initializeCG()
  * @param v vertice chiave della mappa
  * @param f faccia in conflitto col vertice da inserire nel set con chiave v
  */
-void MyConflictGraph::addFaceToVConflict(Pointd &v, Dcel::Face *f)
+void MyConflictGraph::addFaceToVConflict(Pointd &v, Dcel::Face* f)
 {
     //controllo se la mia chiave "f" esiste: se si, inserisco il vertice nel set di vertici
     if(conflictVertices.find(v) == conflictVertices.end())
     {
-        conflictVertices[v] =  new std::set<Dcel::Face*>();;
 
-    } //altrimenti istanzio il set di vertici, aggiungo il vertice al set e infine inserisco faccia e vertice nella mappa
-        conflictVertices[v]->insert(f);
+        std::set<Dcel::Face*>* set = new std::set<Dcel::Face*>();
+        set->insert(f);
+
+        conflictVertices[v] =  set;
+
+    } else {
+
+        std::set<Dcel::Face*>* set = conflictVertices[v];
+        set->insert(f);
+    }
 }
 
 /**
@@ -124,17 +131,19 @@ void MyConflictGraph::addVertexToFConflict(Dcel::Face *f, Pointd &v)
  * @param point
  * @return
  */
-std::set<Dcel::Face*>* MyConflictGraph::getFacesInConflict(const Pointd &vertex){
+std::set<Dcel::Face*>* MyConflictGraph::getFacesInConflict(Pointd &vertex){
 
-    std::set<Dcel::Face*> *facesSet = conflictVertices[vertex];
+    std::set<Dcel::Face*> *facesSet;
 
     // se non ha trovato elementi torno un set vuoto (può servirmi più avanti)
-    if(facesSet == nullptr)
+    if(conflictVertices[vertex] == nullptr)
     {
         facesSet = new std::set<Dcel::Face*>;
 
         //inserisco il set di facce nella conflict list dei punti
         conflictVertices[vertex]=facesSet;
+    } else {
+        facesSet = conflictVertices[vertex];
     }
 
     return new std::set<Dcel::Face*>(*facesSet);

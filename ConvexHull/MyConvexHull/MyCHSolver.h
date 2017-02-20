@@ -34,6 +34,7 @@ public:
     std::vector<Dcel::Face*> facesList;
     std::vector<Pointd> vertexArray;
     void deleteFacesFromDcel(std::set<Dcel::Face *> *visibleFaces);
+    std::vector<Dcel::HalfEdge *> calcHorizon(std::set<Dcel::Face *> *&facesSet);
 };
 
 #endif // MYDCEL_H

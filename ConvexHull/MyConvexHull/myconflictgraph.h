@@ -16,7 +16,7 @@ public:
     std::map<Dcel::Face*, std::set<Pointd>*> conflictFaces;
     std::map<Pointd, std::set<Dcel::Face*>*> conflictVertices;
     void initializeCG();    
-    std::set<Dcel::Face*>* getFacesInConflict(const Pointd &);
+    std::set<Dcel::Face*>* getFacesInConflict(Pointd &);
     std::set<Pointd> *getVerticesInConflict(Dcel::Face *f);
     std::map<Dcel::HalfEdge *, std::set<Pointd> *> lookForVerticesInConflict(std::vector<Dcel::HalfEdge *> myHorizon);
     void deleteFacesFromCG(std::set<Dcel::Face *> *visibleFaces);
