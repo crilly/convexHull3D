@@ -85,8 +85,6 @@ void MyConflictGraph::initializeCG()
             indexVertexArray++;
         }
     }
-
-    bool maio = true;
 }
 
 /**
@@ -97,16 +95,12 @@ void MyConflictGraph::initializeCG()
 void MyConflictGraph::addFaceToVConflict(Pointd &v, Dcel::Face *f)
 {
     //controllo se la mia chiave "f" esiste: se si, inserisco il vertice nel set di vertici
-    if(conflictVertices.find(v) != conflictVertices.end())
+    if(conflictVertices.find(v) == conflictVertices.end())
     {
-        std::set<Dcel::Face*> *temp = conflictVertices.at(v);
-        temp->insert(f);
-    }
-    else { //altrimenti istanzio il set di vertici, aggiungo il vertice al set e infine inserisco faccia e vertice nella mappa
-        std::set<Dcel::Face*> *myFacesSet = new std::set<Dcel::Face*>();
-        myFacesSet->insert(f);
-        conflictVertices[v] = myFacesSet;
-    }
+        conflictVertices[v] =  new std::set<Dcel::Face*>();;
+
+    } //altrimenti istanzio il set di vertici, aggiungo il vertice al set e infine inserisco faccia e vertice nella mappa
+        conflictVertices->insert(f);
 }
 
 /**
@@ -117,16 +111,12 @@ void MyConflictGraph::addFaceToVConflict(Pointd &v, Dcel::Face *f)
 void MyConflictGraph::addVertexToFConflict(Dcel::Face *f, Pointd &v)
 {
     //controllo se la mia chiave "f" esiste: se si, inserisco il vertice nel set di vertici
-    if(conflictFaces.find(f) != conflictFaces.end())
+    if(conflictFaces.find(f) == conflictFaces.end())
     {
-        std::set<Pointd> *temp = conflictFaces.at(f);
-        temp->insert(v);
+        conflictFaces[f] = new std::set<Pointd>();
     }
-    else { //altrimenti istanzio il set di vertici, aggiungo il vertice al set e infine inserisco faccia e vertice nella mappa
-        std::set<Pointd> *myVerticesSet = new std::set<Pointd>();
-        myVerticesSet->insert(v);
-        conflictFaces[f] = myVerticesSet;
-    }
+     //altrimenti istanzio il set di vertici, aggiungo il vertice al set e infine inserisco faccia e vertice nella mappa
+      conflictFaces->insert(v);
 }
 
 /**

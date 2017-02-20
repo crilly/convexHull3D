@@ -28,16 +28,19 @@ void MyCHSolver::buildCH()
 
     //creo la prima faccia del tetraedro e rendo una lista dei primi 3 half-edge
     std::list<Dcel::HalfEdge*> list = initializeTetrahedron(coplanarity);
+
     //aggiungo le altre 3 facce per chiudere il tetraedro
     facesList = addFacesTetrahedron(list, vertexArray[3]);
+
     //setto correttamente tutti i twin del tetraedro
     setTwins(facesList);
+
+    randomizeVertexArray();
 
     //inizializzo il conflict graph
     MyConflictGraph conflictGraph(dcel, vertexArray);
     //inizializzo il conflict graph
     conflictGraph.initializeCG();
-    randomizeVertexArray();
 
     std::vector<Dcel::HalfEdge*> horizon;
 
@@ -51,16 +54,9 @@ void MyCHSolver::buildCH()
         if(!visibleFaces->empty())
         {
             horizon = computeHorizon(visibleFaces);
-            foreach (Dcel::HalfEdge* he, horizon) {
-                qDebug(" From: (%f %f %f) To: (%f %f %f)", he->getFromVertex()->getCoordinate().x(), he->getFromVertex()->getCoordinate().y(), he->getFromVertex()->getCoordinate().z(), he->getToVertex()->getCoordinate().x(), he->getToVertex()->getCoordinate().y(), he->getToVertex()->getCoordinate().z());
-            }
-            qDebug("------------------------------------------------------");
-            qDebug("------------------------------------------------------");
+
         }
-        bool miaoooo = true;
     }
-
-
 }
 
 
@@ -73,7 +69,7 @@ int MyCHSolver::extractFourPoints()
 {
     srand(time(NULL));
     int coplanarity, size = 0;
-    std::vector<Pointd> fourPoints;
+    std::vector<Pointd> fourPoints(4);
 
     //popolo un vettore di Pointd con le coordinate dei vertici della DCEL in input
     for(auto vertexIterator = dcel->vertexBegin(); vertexIterator != dcel->vertexEnd(); ++vertexIterator)
@@ -181,24 +177,24 @@ std::list<Dcel::HalfEdge*> MyCHSolver::initializeTetrahedron(int coplanarity)
 
     } else if(coplanarity == -1) //altrimenti in senso opposto
     {
-        hf1->setFromVertex(v2);
-        hf1->setToVertex(v1);
+        hf1->setFromVertex(v3);
+        hf1->setToVertex(v2);
         hf1->setNext(hf2);
-        hf1->setPrev(hf1);
+        hf1->setPrev(hf3);
 
-        hf2->setFromVertex(v1);
-        hf2->setToVertex(v3);
+        hf2->setFromVertex(v2);
+        hf2->setToVertex(v1);
         hf2->setNext(hf3);
         hf2->setPrev(hf1);
 
-        hf3->setFromVertex(v3);
-        hf3->setToVertex(v2);
+        hf3->setFromVertex(v1);
+        hf3->setToVertex(v3);
         hf3->setNext(hf1);
         hf3->setPrev(hf2);
 
-        v1->setIncidentHalfEdge(hf2);
-        v2->setIncidentHalfEdge(hf1);
-        v3->setIncidentHalfEdge(hf3);
+        v1->setIncidentHalfEdge(hf3);
+        v2->setIncidentHalfEdge(hf2);
+        v3->setIncidentHalfEdge(hf1);
     }
 
     //setto la cardinalità di ciascun vertice (corrisponde al numero di half-edges connessi ad esso)
@@ -248,14 +244,18 @@ int MyCHSolver::returnCoplanarity(std::vector<Pointd> myVertexArray)
     det = mat.determinant();
 
     //se il determinante è compreso in questo intervallo, i punti sono complanari e resetto il valore del determinante per comodità
-    if(det > - std::numeric_limits<double>::epsilon() && det < std::numeric_limits<double>::epsilon())
-    {
-        det = 0.0;
-    }
+    bool sign = det > -std::numeric_limits<double>::epsilon() && det < std::numeric_limits<double>::epsilon();
 
-    if(det == 0.0) return 0;
-    else if(det > 0.0) return 1;
-    else return -1;
+    if(!sign){
+         if(det < -std::numeric_limits<double>::epsilon()){
+           return -1;
+         } else {
+           return  1;
+         }
+     } else {
+       return 0;
+     }
+
 }
 
 
