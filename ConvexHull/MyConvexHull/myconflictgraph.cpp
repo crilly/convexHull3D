@@ -47,7 +47,7 @@ void MyConflictGraph::initializeCG()
     std::vector<Eigen::Matrix4d> matrices(4);
 
     int size = vertexArray.size();
-    int indexVertexArray = 4;
+    int indexVertexArray = 0;
 
     createMatrixForFace(0, matrices[0]);
     createMatrixForFace(1, matrices[1]);
@@ -59,15 +59,17 @@ void MyConflictGraph::initializeCG()
     **  */
     for(auto iterator = dcel->faceBegin(); iterator != dcel->faceEnd(); ++iterator)
     {
-        indexVertexArray = 4;
+        indexVertexArray = 0;
         Dcel::Face *currentFace = (*iterator);
 
         //scorro il mio vettore di vertici del modello (tranne i primi 4 che fanno parte del tetraedro)
-        while(indexVertexArray != size)
+
+        for (auto iterVert = vertexArray.begin(); iterVert != vertexArray.end(); iterVert++ )
         {
-            matrices[currentFace->getId()](3, 0) = vertexArray[indexVertexArray].x();
-            matrices[currentFace->getId()](3, 1) = vertexArray[indexVertexArray].y();
-            matrices[currentFace->getId()](3, 2) = vertexArray[indexVertexArray].z();
+
+            matrices[currentFace->getId()](3, 0) = (*iterVert).x();
+            matrices[currentFace->getId()](3, 1) = (*iterVert).y();
+            matrices[currentFace->getId()](3, 2) = (*iterVert).z();
             matrices[currentFace->getId()](3, 3) = 1;
 
             auto det = matrices[currentFace->getId()].determinant();
@@ -77,12 +79,10 @@ void MyConflictGraph::initializeCG()
             if(det < -std::numeric_limits<double>::epsilon())
             {
                 //metodi d'appoggio per andare a inserire facce e vertici nei rispettivi CG
-                addFaceToVConflict(vertexArray[indexVertexArray], currentFace);
-                addVertexToFConflict(currentFace, vertexArray[indexVertexArray]);
+                addFaceToVConflict((*iterVert), currentFace);
+                addVertexToFConflict(currentFace, (*iterVert));
             }
 
-            //passo al vertice successivo (se sono arrivata all'ultimo, uscirò dal while)
-            indexVertexArray++;
         }
     }
 }
