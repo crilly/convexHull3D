@@ -302,13 +302,13 @@ std::vector<Dcel::Face*> MyCHSolver::addFaces(std::vector<Dcel::HalfEdge*> list,
         (*halfEdgeIterator)->getToVertex()->setIncidentHalfEdge(he1);
         (*halfEdgeIterator)->getFromVertex()->setIncidentHalfEdge(he2);
         vertex->setIncidentHalfEdge(he3);
-        vertex->incrementCardinality();
-        vertex->incrementCardinality();
 
-        he1->getFromVertex()->incrementCardinality();
-        he1->getFromVertex()->incrementCardinality();
         he1->getToVertex()->incrementCardinality();
-        he1->getToVertex()->incrementCardinality();
+        he1->getFromVertex()->incrementCardinality();
+        he2->getToVertex()->incrementCardinality();
+        he2->getFromVertex()->incrementCardinality();
+        he3->getToVertex()->incrementCardinality();
+        he3->getFromVertex()->incrementCardinality();
 
         he1->setFace(currentFace);
         he2->setFace(currentFace);
@@ -440,6 +440,8 @@ void MyCHSolver::deleteFacesFromDcel(std::set<Dcel::Face*> *visibleFaces)
             Dcel::Vertex *fromVertex = (*heIter)->getFromVertex();
             Dcel::Vertex *toVertex = (*heIter)->getToVertex();
 
+            dcel->deleteHalfEdge(*heIter);
+
             fromVertex->decrementCardinality();
             toVertex->decrementCardinality();
 
@@ -452,7 +454,6 @@ void MyCHSolver::deleteFacesFromDcel(std::set<Dcel::Face*> *visibleFaces)
                 dcel->deleteVertex(toVertex);
             }
 
-            dcel->deleteHalfEdge(*heIter);
         }
         dcel->deleteFace(*faceIter);
     }

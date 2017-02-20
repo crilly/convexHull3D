@@ -196,18 +196,20 @@ void MyConflictGraph::deleteFacesFromCG(std::set<Dcel::Face*> *visibleFaces)
     {
         std::set<Pointd> *visiblePoints = conflictFaces[*faceIter];
 
-        //se trovo punti, allora li devo eliminare (ovvero se la faccia da distruggere era visibile da qualche punto)
-        if(visiblePoints != nullptr)
-        {
+        //infine elimino la faccia dal CG delle facce
+        conflictFaces.erase(*faceIter);
+
+//        //se trovo punti, allora li devo eliminare (ovvero se la faccia da distruggere era visibile da qualche punto)
+//        if(visiblePoints != nullptr)
+//        {
             //per ogni punto trovato, vado ad eliminare la faccia da distruggere dalla sua lista
             for(auto pointIter = visiblePoints->begin(); pointIter != visiblePoints->end(); pointIter++)
             {
                 conflictVertices[*pointIter]->erase(*faceIter);
             }
 
-            //infine elimino la faccia dal CG delle facce
-            conflictFaces.erase(*faceIter);
-        }
+
+//        }
     }
 }
 
@@ -266,9 +268,9 @@ void MyConflictGraph::updateBothCG(Dcel::Face *newFace, std::set<Pointd> *vertic
  */
 void MyConflictGraph::deleteVertexFromCG(Pointd &point)
 {
-    conflictVertices.erase(point);
-
     std::set<Dcel::Face*> *facesInConflict = getFacesInConflict(point);
+
+    conflictVertices.erase(point);
 
     for(auto faceIter = facesInConflict->begin(); faceIter != facesInConflict->end(); faceIter++)
     {
