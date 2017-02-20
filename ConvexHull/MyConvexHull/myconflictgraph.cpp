@@ -139,3 +139,140 @@ std::set<Dcel::Face*>* MyConflictGraph::getFacesInConflict(const Pointd &vertex)
 
     return new std::set<Dcel::Face*>(*facesSet);
 }
+
+
+/**
+ * @brief MyConflictGraph::getVerticesInConflict
+ * @param point
+ * @return
+ */
+std::set<Pointd>* MyConflictGraph::getVerticesInConflict(Dcel::Face* f){
+
+    std::set<Pointd> *verticesSet = conflictFaces[f];
+
+    // se non ha trovato elementi torno un set vuoto (può servirmi più avanti)
+    if(verticesSet == nullptr)
+    {
+        verticesSet = new std::set<Pointd>;
+
+        //inserisco il set di facce nella conflict list dei punti
+        conflictFaces[f] = verticesSet;
+    }
+
+    return new std::set<Pointd>(*verticesSet);
+}
+
+
+/**
+ * @brief MyConflictGraph::lookForVerticesInConflict
+ * @param myHorizon
+ * @return
+ */
+std::map<Dcel::HalfEdge*, std::set<Pointd>*> MyConflictGraph::lookForVerticesInConflict(std::vector<Dcel::HalfEdge*> myHorizon)
+{
+    std::map<Dcel::HalfEdge*, std::set<Pointd>*> mapOfVerticesForCG;
+
+    for(auto horizonIter = myHorizon.begin(); horizonIter != myHorizon.end(); horizonIter++)
+    {
+        std::set<Pointd> *setPointsHorizon = getVerticesInConflict((*horizonIter)->getFace());
+        std::set<Pointd> *setPointsHorizonTwin = getVerticesInConflict((*horizonIter)->getTwin()->getFace());
+
+        setPointsHorizon->insert(setPointsHorizonTwin->begin(), setPointsHorizonTwin->end());
+
+        mapOfVerticesForCG[*horizonIter] = setPointsHorizon;
+    }
+
+    return mapOfVerticesForCG;
+}
+
+
+/**
+ * @brief MyConflictGraph::deleteFacesFromCG
+ * @param visibleFaces
+ */
+void MyConflictGraph::deleteFacesFromCG(std::set<Dcel::Face*> *visibleFaces)
+{
+    for(auto faceIter = visibleFaces->begin(); faceIter != visibleFaces->end(); faceIter++)
+    {
+        std::set<Pointd> *visiblePoints = conflictFaces[*faceIter];
+
+        //se trovo punti, allora li devo eliminare (ovvero se la faccia da distruggere era visibile da qualche punto)
+        if(visiblePoints != nullptr)
+        {
+            //per ogni punto trovato, vado ad eliminare la faccia da distruggere dalla sua lista
+            for(auto pointIter = visiblePoints->begin(); pointIter != visiblePoints->end(); pointIter++)
+            {
+                conflictVertices[*pointIter]->erase(*faceIter);
+            }
+
+            //infine elimino la faccia dal CG delle facce
+            conflictFaces.erase(*faceIter);
+        }
+    }
+}
+
+
+/**
+ * @brief MyConflictGraph::isVisible
+ * @param vertex
+ * @param face
+ * @return
+ */
+bool MyConflictGraph::isVisible(Dcel::Face *face, Pointd point) const{
+
+    Eigen::Matrix4d matrix;
+    int i=0;
+
+    for(auto heIter = face->incidentHalfEdgeBegin(); heIter != face->incidentHalfEdgeEnd(); heIter++, i++)
+    {
+        matrix(i,0) = (*heIter)->getFromVertex()->getCoordinate().x();
+        matrix(i,1) = (*heIter)->getFromVertex()->getCoordinate().y();
+        matrix(i,2) = (*heIter)->getFromVertex()->getCoordinate().z();
+        matrix(i,3) = 1;
+    }
+
+    matrix(3,0) = point.x();
+    matrix(3,1) = point.y();
+    matrix(3,2) = point.z();
+    matrix(3,3) = 1;
+
+    if(matrix.determinant() < -std::numeric_limits<double>::epsilon()) return true;
+    else return false;
+}
+
+
+/**
+ * @brief MyConflictGraph::updateBothCG
+ * @param newFace
+ * @param verticesSet
+ */
+void MyConflictGraph::updateBothCG(Dcel::Face *newFace, std::set<Pointd> *verticesSet)
+{
+    for(auto pointIter = verticesSet->begin(); pointIter != verticesSet->end(); pointIter++)
+    {
+        Pointd point = (*pointIter);
+        if(isVisible(newFace, point))
+        {
+            addFaceToVConflict(point, newFace);
+            addVertexToFConflict(newFace, point);
+        }
+    }
+}
+
+
+/**
+ * @brief MyConflictGraph::deleteVertexFromCG
+ * @param point
+ */
+void MyConflictGraph::deleteVertexFromCG(Pointd &point)
+{
+    conflictVertices.erase(point);
+
+    std::set<Dcel::Face*> *facesInConflict = getFacesInConflict(point);
+
+    for(auto faceIter = facesInConflict->begin(); faceIter != facesInConflict->end(); faceIter++)
+    {
+        conflictFaces[*faceIter]->erase(point);
+    }
+
+}

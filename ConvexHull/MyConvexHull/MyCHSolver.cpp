@@ -27,13 +27,10 @@ void MyCHSolver::buildCH()
     int coplanarity = extractFourPoints();
 
     //creo la prima faccia del tetraedro e rendo una lista dei primi 3 half-edge
-    std::list<Dcel::HalfEdge*> list = initializeTetrahedron(coplanarity);
+    std::vector<Dcel::HalfEdge*> list = initializeTetrahedron(coplanarity);
 
     //aggiungo le altre 3 facce per chiudere il tetraedro
-    facesList = addFacesTetrahedron(list, vertexArray[3]);
-
-    //setto correttamente tutti i twin del tetraedro
-    setTwins(facesList);
+    std::vector<Dcel::Face*> facesTetrahedron = addFaces(list, vertexArray[3]);
 
     randomizeVertexArray();
 
@@ -45,17 +42,35 @@ void MyCHSolver::buildCH()
     std::vector<Dcel::HalfEdge*> horizon;
 
     //per ciascun vertice rimasto del modello in input, calcolo il corrispettivo orizzonte e computo la nuova CH
-    for(auto iter = vertexArray.begin(); iter != vertexArray.end(); iter++)
+    for(auto pointIter = vertexArray.begin(); pointIter != vertexArray.end(); pointIter++)
     {
+        Pointd vertex = (*pointIter);
         //recupero il set di facce visibili dal vertice tramite un metodo d'appoggio
-        std::set<Dcel::Face*> *visibleFaces = conflictGraph.getFacesInConflict(*iter);
+        std::set<Dcel::Face*> *visibleFaces = conflictGraph.getFacesInConflict(vertex);
 
         //computo l'orizzonte solo se il set di facce visibili ha almeno un elemento, altrimenti il punto è interno al CH
         if(!visibleFaces->empty())
         {
             horizon = computeHorizon(visibleFaces);
 
+            std::map<Dcel::HalfEdge*, std::set<Pointd>*> mapOfVerticesForCG = conflictGraph.lookForVerticesInConflict(horizon);
+
+            conflictGraph.deleteFacesFromCG(visibleFaces);
+            deleteFacesFromDcel(visibleFaces);
+
+            //creo le nuove facce a partire dagli half-edge dell'orizzonte e il nuovo vertice in esame
+            std::vector<Dcel::Face*> newFaces = addFaces(horizon, vertex);
+
+            //per tutti gli half-edge dell'orizzonte, e per ogni faccia appena creata, aggiorno entrambi i CG con le nuove facce
+            for(auto horizonIter = horizon.begin(); horizonIter != horizon.end(); horizonIter++)
+            {
+                for(auto faceIter = newFaces.begin(); faceIter != newFaces.end(); faceIter++)
+                {
+                    conflictGraph.updateBothCG((*faceIter), mapOfVerticesForCG[*horizonIter]);
+                }
+            }
         }
+        conflictGraph.deleteVertexFromCG(vertex);
     }
 }
 
@@ -118,7 +133,7 @@ int MyCHSolver::extractFourPoints()
  * @param coplanarity mi serve per tenere il segno del determinante (< 0 oppure > 0)
  * @return torna una lista di half-edges che mi sarà utile per settare in maniera corretta e più semplice i twin degli half-edges
  */
-std::list<Dcel::HalfEdge*> MyCHSolver::initializeTetrahedron(int coplanarity)
+std::vector<Dcel::HalfEdge*> MyCHSolver::initializeTetrahedron(int coplanarity)
 {
     //svuoto la Dcel
     dcel->reset();
@@ -139,24 +154,7 @@ std::list<Dcel::HalfEdge*> MyCHSolver::initializeTetrahedron(int coplanarity)
     //se il determinante è > 0 allora per preservare il senso antiorario, dobbiamo settare le proprietà nel seguente modo
     if(coplanarity == 1)
     {
-        hf1->setFromVertex(v1); hf1->setFromVertex(v1);
-        hf1->setToVertex(v2);
-        hf1->setNext(hf2);
-        hf1->setPrev(hf3);
-
-        hf2->setFromVertex(v2);
-        hf2->setToVertex(v3);
-        hf2->setNext(hf3);
-        hf2->setPrev(hf1);
-
-        hf3->setFromVertex(v3);
-        hf3->setToVertex(v1);
-        hf3->setNext(hf1);
-        hf3->setPrev(hf2);
-
-        v1->setIncidentHalfEdge(hf1);
-        v2->setIncidentHalfEdge(hf2);
-        v3->setIncidentHalfEdge(hf3);
+        hf1->setFromVertex(v1);
         hf1->setToVertex(v2);
         hf1->setNext(hf2);
         hf1->setPrev(hf3);
@@ -211,7 +209,7 @@ std::list<Dcel::HalfEdge*> MyCHSolver::initializeTetrahedron(int coplanarity)
     hf3->setFace(f);
 
     //inserisco i miei primi 3 half-edges in una lista di half-edge (mi sarà più comodo più avanti per i twin)
-    std::list<Dcel::HalfEdge*> halfEdgeList;
+    std::vector<Dcel::HalfEdge*> halfEdgeList;
     halfEdgeList.push_back(hf1);
     halfEdgeList.push_back(hf2);
     halfEdgeList.push_back(hf3);
@@ -247,14 +245,14 @@ int MyCHSolver::returnCoplanarity(std::vector<Pointd> myVertexArray)
     bool sign = det > -std::numeric_limits<double>::epsilon() && det < std::numeric_limits<double>::epsilon();
 
     if(!sign){
-         if(det < -std::numeric_limits<double>::epsilon()){
-           return -1;
-         } else {
-           return  1;
-         }
-     } else {
-       return 0;
-     }
+        if(det < -std::numeric_limits<double>::epsilon()){
+            return -1;
+        } else {
+            return  1;
+        }
+    } else {
+        return 0;
+    }
 
 }
 
@@ -267,7 +265,7 @@ int MyCHSolver::returnCoplanarity(std::vector<Pointd> myVertexArray)
  * @param newVertex è il quarto vertice da aggiungere per chiudere l'inizializzazione del tetraedro, corrisponde al quarto punto estratto
  * @return torno un vettore di facce contenente le nuove tre facce appena create (verrà utilizzato per settare correttamente i twin)
  */
-std::vector<Dcel::Face*> MyCHSolver::addFacesTetrahedron(std::list<Dcel::HalfEdge*> list, Pointd newVertex)
+std::vector<Dcel::Face*> MyCHSolver::addFaces(std::vector<Dcel::HalfEdge*> list, Pointd newVertex)
 {
     //inizializzo una lista di facce che mi servirà per settare correttamente i twin del tetraedro
     std::vector<Dcel::Face*> faceList;
@@ -322,6 +320,7 @@ std::vector<Dcel::Face*> MyCHSolver::addFacesTetrahedron(std::list<Dcel::HalfEdg
         faceList.push_back(currentFace);
     }
 
+    setTwins(faceList);
     return faceList;
 }
 
@@ -425,4 +424,36 @@ std::vector<Dcel::HalfEdge*> MyCHSolver::computeHorizon(std::set<Dcel::Face*>* s
     }
 
     return horizon;
+}
+
+
+/**
+ * @brief MyCHSolver::deleteFacesFromDcel
+ * @param visibleFaces
+ */
+void MyCHSolver::deleteFacesFromDcel(std::set<Dcel::Face*> *visibleFaces)
+{
+    for(auto faceIter = visibleFaces->begin(); faceIter != visibleFaces->end(); faceIter++)
+    {
+        for(auto heIter = (*faceIter)->incidentHalfEdgeBegin(); heIter != (*faceIter)->incidentHalfEdgeEnd(); heIter++)
+        {
+            Dcel::Vertex *fromVertex = (*heIter)->getFromVertex();
+            Dcel::Vertex *toVertex = (*heIter)->getToVertex();
+
+            fromVertex->decrementCardinality();
+            toVertex->decrementCardinality();
+
+            if(fromVertex->getCardinality() == 0)
+            {
+                dcel->deleteVertex(fromVertex);
+            }
+            if(toVertex->getCardinality() == 0)
+            {
+                dcel->deleteVertex(toVertex);
+            }
+
+            dcel->deleteHalfEdge(*heIter);
+        }
+        dcel->deleteFace(*faceIter);
+    }
 }

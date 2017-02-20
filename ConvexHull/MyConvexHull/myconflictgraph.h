@@ -11,13 +11,18 @@ class MyConflictGraph
 {
 public:
     DrawableDcel *dcel;
-    std::vector<Dcel::Face*> facesList;
     std::vector<Pointd> vertexArray;
     MyConflictGraph(DrawableDcel*, std::vector<Pointd>);
     std::map<Dcel::Face*, std::set<Pointd>*> conflictFaces;
     std::map<Pointd, std::set<Dcel::Face*>*> conflictVertices;
     void initializeCG();    
     std::set<Dcel::Face*>* getFacesInConflict(const Pointd &);
+    std::set<Pointd> *getVerticesInConflict(Dcel::Face *f);
+    std::map<Dcel::HalfEdge *, std::set<Pointd> *> lookForVerticesInConflict(std::vector<Dcel::HalfEdge *> myHorizon);
+    void deleteFacesFromCG(std::set<Dcel::Face *> *visibleFaces);
+    void deleteVertexFromCG(Pointd &point);
+    bool isVisible(Dcel::Face *face, Pointd point) const;
+    void updateBothCG(Dcel::Face *newFace, std::set<Pointd> *verticesSet);
 
 private:
     void createMatrixForFace(int, Eigen::Matrix4d &);

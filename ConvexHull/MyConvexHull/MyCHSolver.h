@@ -21,8 +21,8 @@ private:
 
     int returnCoplanarity(std::vector<Pointd>);
     int extractFourPoints();
-    std::list<Dcel::HalfEdge*> initializeTetrahedron(int);
-    std::vector<Dcel::Face*> addFacesTetrahedron(std::list<Dcel::HalfEdge*>, Pointd);
+    std::vector<Dcel::HalfEdge*> initializeTetrahedron(int);
+    std::vector<Dcel::Face*> addFaces(std::vector<Dcel::HalfEdge*>, Pointd);
     void setTwins(std::vector<Dcel::Face*>);
     void randomizeVertexArray();    
     std::vector<Dcel::HalfEdge*> computeHorizon(std::set<Dcel::Face*>*);
@@ -32,6 +32,7 @@ public:
     void buildCH();
     std::vector<Dcel::Face*> facesList;
     std::vector<Pointd> vertexArray;
+    void deleteFacesFromDcel(std::set<Dcel::Face *> *visibleFaces);
 };
 
 #endif // MYDCEL_H
