@@ -16,6 +16,7 @@ class MyCHSolver
 private:
     DrawableDcel *dcel;
     MainWindow *mainWindow;
+    bool showPhases;
     int a, b, c, d;
     double det = 0.0;    
 
@@ -28,7 +29,7 @@ private:
     std::vector<Dcel::HalfEdge*> computeHorizon(std::set<Dcel::Face*>*);
 
 public:
-    MyCHSolver(DrawableDcel *dcel, MainWindow *mainWindow);
+    MyCHSolver(DrawableDcel *dcel, MainWindow *mainWindow, bool const &showPhases);
     void buildCH();
     std::vector<Dcel::Face*> facesList;
     std::vector<Pointd> vertexArray;

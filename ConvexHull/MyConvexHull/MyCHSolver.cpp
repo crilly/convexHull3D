@@ -5,10 +5,11 @@
  * @param dcel consiste della dcel dei punti del modello 3D in input
  * @param mainwindow
  */
-MyCHSolver::MyCHSolver(DrawableDcel *dcel, MainWindow *mainWindow)
+MyCHSolver::MyCHSolver(DrawableDcel *dcel, MainWindow *mainWindow, bool const &showPhases)
 {
     this->dcel = dcel;
     this->mainWindow = mainWindow;
+    this->showPhases = showPhases;
 }
 
 
@@ -33,6 +34,11 @@ void MyCHSolver::buildCH()
     std::vector<Dcel::Face*> facesTetrahedron = addFaces(list, vertexArray[3]);
 
     randomizeVertexArray();
+
+    if(showPhases){
+            dcel->update();
+            this->mainWindow->updateGlCanvas();
+    }
 
     //inizializzo il conflict graph
     MyConflictGraph conflictGraph(dcel, vertexArray);
@@ -68,6 +74,11 @@ void MyCHSolver::buildCH()
                 {
                     conflictGraph.updateBothCG((*faceIter), mapOfVerticesForCG[*horizonIter]);
                 }
+            }
+
+            if(showPhases){
+                    dcel->update();
+                    this->mainWindow->updateGlCanvas();
             }
         }
         conflictGraph.deleteVertexFromCG(vertex);
