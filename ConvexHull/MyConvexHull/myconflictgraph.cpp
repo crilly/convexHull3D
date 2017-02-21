@@ -199,14 +199,13 @@ std::map<Dcel::HalfEdge*, std::set<Pointd>*> MyConflictGraph::lookForVerticesInC
  * @brief MyConflictGraph::deleteFacesFromCG
  * @param visibleFaces
  */
-void MyConflictGraph::deleteFacesFromCG(std::set<Dcel::Face*> *visibleFaces)
+void MyConflictGraph::deleteFacesFromCG(Dcel::Face *visibleFace)
 {
-    for(auto faceIter = visibleFaces->begin(); faceIter != visibleFaces->end(); faceIter++)
-    {
-        std::set<Pointd> *visiblePoints = conflictFaces[*faceIter];
+
+        std::set<Pointd> *visiblePoints = conflictFaces[visibleFace];
 
         //infine elimino la faccia dal CG delle facce
-        conflictFaces.erase(*faceIter);
+        conflictFaces.erase(visibleFace);
 
 //        //se trovo punti, allora li devo eliminare (ovvero se la faccia da distruggere era visibile da qualche punto)
 //        if(visiblePoints != nullptr)
@@ -214,12 +213,12 @@ void MyConflictGraph::deleteFacesFromCG(std::set<Dcel::Face*> *visibleFaces)
             //per ogni punto trovato, vado ad eliminare la faccia da distruggere dalla sua lista
             for(auto pointIter = visiblePoints->begin(); pointIter != visiblePoints->end(); pointIter++)
             {
-                conflictVertices[*pointIter]->erase(*faceIter);
+                conflictVertices[*pointIter]->erase(visibleFace);
             }
 
 
 //        }
-    }
+
 }
 
 

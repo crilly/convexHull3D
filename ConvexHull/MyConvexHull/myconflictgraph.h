@@ -19,7 +19,7 @@ public:
     std::set<Dcel::Face*>* getFacesInConflict(Pointd &);
     std::set<Pointd> *getVerticesInConflict(Dcel::Face *f);
     std::map<Dcel::HalfEdge *, std::set<Pointd> *> lookForVerticesInConflict(std::vector<Dcel::HalfEdge *> myHorizon);
-    void deleteFacesFromCG(std::set<Dcel::Face *> *visibleFaces);
+    void deleteFacesFromCG(Dcel::Face *visibleFace);
     void deleteVertexFromCG(Pointd &point);
     bool isVisible(Dcel::Face *face, Pointd point) const;
     void updateBothCG(Dcel::Face *newFace, std::set<Pointd> *verticesSet);

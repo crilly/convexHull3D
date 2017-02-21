@@ -24,10 +24,6 @@ MyCHSolver::MyCHSolver(DrawableDcel *dcel, MainWindow *mainWindow, bool const &s
  */
 void MyCHSolver::buildCH()
 {
-
-    /////test
-    int count = 0;
-
     //estraggo i primi 4 punti
     int coplanarity = extractFourPoints();
 
@@ -49,13 +45,6 @@ void MyCHSolver::buildCH()
     //inizializzo il conflict graph
     conflictGraph.initializeCG();
 
-    ///////////////////////////
-    ///
-    ///         FIN QUI TUTTO BENE
-    ///
-    /// /////////////////////////
-
-
     std::vector<Dcel::HalfEdge*> horizon;
 
     //per ciascun vertice rimasto del modello in input, calcolo il corrispettivo orizzonte e computo la nuova CH
@@ -68,12 +57,15 @@ void MyCHSolver::buildCH()
         //computo l'orizzonte solo se il set di facce visibili ha almeno un elemento, altrimenti il punto è interno al CH
         if(!visibleFaces->empty())
         {
-            horizon = calcHorizon(visibleFaces);
+            horizon = computeHorizon(visibleFaces);
 
             std::map<Dcel::HalfEdge*, std::set<Pointd>*> mapOfVerticesForCG = conflictGraph.lookForVerticesInConflict(horizon);
 
-            conflictGraph.deleteFacesFromCG(visibleFaces);
-            deleteFacesFromDcel(visibleFaces);
+            for(auto faceVisibleIter = visibleFaces->begin(); faceVisibleIter != visibleFaces->end(); faceVisibleIter++)
+            {
+                conflictGraph.deleteFacesFromCG(*faceVisibleIter);
+                deleteFacesFromDcel(*faceVisibleIter);
+            }
 
             //creo le nuove facce a partire dagli half-edge dell'orizzonte e il nuovo vertice in esame
             std::vector<Dcel::Face*> newFaces = addFaces(horizon, vertex);
@@ -93,8 +85,6 @@ void MyCHSolver::buildCH()
             }
         }
         conflictGraph.deleteVertexFromCG(vertex);
-        qDebug("Iterazione %d", count);
-        count++;
     }
 }
 
@@ -277,7 +267,6 @@ int MyCHSolver::returnCoplanarity(std::vector<Pointd> myVertexArray)
     } else {
         return 0;
     }
-
 }
 
 
@@ -400,10 +389,11 @@ void MyCHSolver::randomizeVertexArray()
  * @param setOfFaces insieme delle facce visibili dal punto in esame
  * @return torna il vettore di half-edge che compongono l'orizzonte del punto
  */
+
 std::vector<Dcel::HalfEdge*> MyCHSolver::computeHorizon(std::set<Dcel::Face*>* setOfFaces)
-{    
+{
     std::vector<Dcel::HalfEdge*> horizon;
-    Dcel::HalfEdge* firstHE;
+    Dcel::HalfEdge* firstHE= new Dcel::HalfEdge;
 
     //per tutte le facce nel conflict graph del vertice corrente, controllo quali fanno parte dell'orizzonte
     for(auto faceIterator = setOfFaces->begin(); faceIterator != setOfFaces->end(); faceIterator++)
@@ -430,12 +420,13 @@ std::vector<Dcel::HalfEdge*> MyCHSolver::computeHorizon(std::set<Dcel::Face*>* s
 
     //inserisco il l'half-edge di partenza nel vettore che conterrà l'horizon
     horizon.push_back(firstHE);
-
-    //inizializzo un half-edge che mi servirà per scorrere il boundary dell'orizzonte
-    Dcel::HalfEdge* next = firstHE->getNext()->getTwin();
-
+    Dcel::HalfEdge* next= new Dcel::HalfEdge;
+    if(firstHE->getNext()->getTwin() != nullptr){
+        //inizializzo un half-edge che mi servirà per scorrere il boundary dell'orizzonte
+        next = firstHE->getNext()->getTwin();
+    }
     //finchè non sono arrivata all'half-edge iniziale (quindi non ho chiuso il giro)
-    while(next->getNext() != firstHE)
+    while(next->getNext()!= firstHE)  //&& next->getNext()->getTwin()->getNext() != firstHE)
     {
         //se la faccia dell'half-edge corrente fa parte dell'insieme delle facce visibili, allora quell'HE fa parte dell'orizzonte
         if(setOfFaces->find(next->getFace()) != setOfFaces->end())
@@ -450,58 +441,8 @@ std::vector<Dcel::HalfEdge*> MyCHSolver::computeHorizon(std::set<Dcel::Face*>* s
         }
     }
 
+
     return horizon;
-}
-
-std::vector<Dcel::HalfEdge*> MyCHSolver::calcHorizon(std::set<Dcel::Face*>* &facesSet) {
-
-    Dcel::HalfEdge* horizonStartHE;
-    std::list<Dcel::HalfEdge*> horizon;
-    bool stop = false;
-
-    for (auto currentFace = facesSet->begin(); currentFace != facesSet->end() && stop != true ; ++currentFace) {
-
-        for (auto currentHE = (*currentFace)->incidentHalfEdgeBegin(); currentHE != (*currentFace)->incidentHalfEdgeEnd() && stop != true; ++currentHE) {
-
-            if ( (*currentHE)->getTwin() != nullptr ) {
-                Dcel::HalfEdge* twin = (*currentHE)->getTwin();
-                Dcel::Face* twinFace = twin->getFace();
-
-                if (facesSet->count(twinFace) == 0 && facesSet->count((*currentHE)->getFace()) != 0) {
-                    horizonStartHE = (*currentHE);
-                    stop = true;
-                }
-            }
-        }
-
-    }
-
-    horizon.push_back(horizonStartHE->getTwin());
-
-    Dcel::HalfEdge* startHE = horizonStartHE;
-
-    do {
-
-        if (facesSet->count(startHE->getNext()->getTwin()->getFace()) == 1 ) {
-            startHE = startHE->getNext()->getTwin();
-        } else {
-            horizon.push_front(startHE->getNext()->getTwin());
-            startHE = startHE->getNext();
-        }
-
-
-    } while (startHE->getNext() != horizonStartHE && startHE->getNext()->getTwin()->getNext() != horizonStartHE);
-
-
-    //   foreach (Dcel::HalfEdge* he, horizon) {
-    //       qDebug(" From: (%f %f %f) To: (%f %f %f)", he->getFromVertex()->getCoordinate().x(), he->getFromVertex()->getCoordinate().y(), he->getFromVertex()->getCoordinate().z(), he->getToVertex()->getCoordinate().x(), he->getToVertex()->getCoordinate().y(), he->getToVertex()->getCoordinate().z());
-    //    }
-    //  qDebug("------------------------------------------------------");
-    //   qDebug("------------------------------------------------------");
-
-    std::vector<Dcel::HalfEdge*> v{ std::begin(horizon), std::end(horizon) };
-    return v;
-
 }
 
 
@@ -510,30 +451,28 @@ std::vector<Dcel::HalfEdge*> MyCHSolver::calcHorizon(std::set<Dcel::Face*>* &fac
  * @brief MyCHSolver::deleteFacesFromDcel
  * @param visibleFaces
  */
-void MyCHSolver::deleteFacesFromDcel(std::set<Dcel::Face*> *visibleFaces)
+void MyCHSolver::deleteFacesFromDcel(Dcel::Face* visibleFace)
 {
-    for(auto faceIter = visibleFaces->begin(); faceIter != visibleFaces->end(); faceIter++)
+    for(auto heIter = visibleFace->incidentHalfEdgeBegin(); heIter != visibleFace->incidentHalfEdgeEnd(); heIter++)
     {
-        for(auto heIter = (*faceIter)->incidentHalfEdgeBegin(); heIter != (*faceIter)->incidentHalfEdgeEnd(); heIter++)
+        Dcel::Vertex *fromVertex = (*heIter)->getFromVertex();
+        Dcel::Vertex *toVertex = (*heIter)->getToVertex();
+
+        dcel->deleteHalfEdge(*heIter);
+
+        fromVertex->decrementCardinality();
+        toVertex->decrementCardinality();
+
+        if(fromVertex->getCardinality() == 0)
         {
-            Dcel::Vertex *fromVertex = (*heIter)->getFromVertex();
-            Dcel::Vertex *toVertex = (*heIter)->getToVertex();
-
-            dcel->deleteHalfEdge(*heIter);
-
-            fromVertex->decrementCardinality();
-            toVertex->decrementCardinality();
-
-            if(fromVertex->getCardinality() == 0)
-            {
-                dcel->deleteVertex(fromVertex);
-            }
-            if(toVertex->getCardinality() == 0)
-            {
-                dcel->deleteVertex(toVertex);
-            }
-
+            dcel->deleteVertex(fromVertex);
         }
-        dcel->deleteFace(*faceIter);
+        if(toVertex->getCardinality() == 0)
+        {
+            dcel->deleteVertex(toVertex);
+        }
+
     }
+    dcel->deleteFace(visibleFace);
+
 }
