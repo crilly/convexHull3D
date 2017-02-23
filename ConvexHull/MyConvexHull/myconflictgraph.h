@@ -9,6 +9,11 @@
 
 class MyConflictGraph
 {
+private:
+    void createMatrixForFace(int, Eigen::Matrix4d &);
+    void addFaceToVConflict(Pointd &, Dcel::Face *);
+    void addVertexToFConflict(Dcel::Face *, Pointd &);
+
 public:
     DrawableDcel *dcel;
     std::vector<Pointd> vertexArray;
@@ -23,11 +28,6 @@ public:
     void deleteVertexFromCG(Pointd &point);
     bool isVisible(Dcel::Face *face, Pointd point) const;
     void updateBothCG(Dcel::Face *newFace, std::set<Pointd> *verticesSet);
-
-private:
-    void createMatrixForFace(int, Eigen::Matrix4d &);
-    void addFaceToVConflict(Pointd &, Dcel::Face *);
-    void addVertexToFConflict(Dcel::Face *, Pointd &);
 };
 
 #endif // MYCONFLICTGRAPH_H

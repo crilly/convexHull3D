@@ -1,9 +1,18 @@
 #include "MyCHSolver.h"
 
+/*********************************
+ * ALGORITMI E STRUTTURE DATI 2
+ * Progetto "3D Convex Hull"
+ *
+ * Cristin Sanna 65033
+ ********************************/
+
+
 /**
  * @brief MyCHSolver::MyCHSolver costruttore della classe principale
  * @param dcel consiste della dcel dei punti del modello 3D in input
- * @param mainwindow
+ * @param mainwindow necessaria per mostrare tutti gli step
+ * @param showPhases settata a true se viene abilitata l'opzione "Show Phases" nella finestra principale
  */
 MyCHSolver::MyCHSolver(DrawableDcel *dcel, MainWindow *mainWindow, bool const &showPhases)
 {
@@ -16,11 +25,15 @@ MyCHSolver::MyCHSolver(DrawableDcel *dcel, MainWindow *mainWindow, bool const &s
 /**
  * @brief MyCHSolver::buildCH è il mio main method che si occupa di costruire la ConvexHull in diversi step:
  *      1. estrae 4 punti random dalla Dcel del modello in input (controllando che non siano complanari)
- *      2. inizializza la Dcel con i primi 3 punti estratti
- *      3. aggiunge il quarto punto costruendo il primo tetraedro (settando rispettivi half-edges, twind, faces ecc.
+ *      2. inizializza la Dcel con i primi 3 punti estratti (e di conseguenza la prima faccia)
+ *      3. aggiunge il quarto punto costruendo il primo tetraedro (settando rispettivi half-edges, twind, faces ecc.)
  *      4. a partire dal tetraedro, inizializzo il mio conflict graph per tenere traccia delle facce e vertici in conflitto
  *      5. elimino i 4 vertici del tetraedro dal mio vettore di vertici (Pointd) e chiamo la funzione shuffle per disordinare i punti
- *      6. scorrendo tutti i punti rimanenti, controllo per ognuno quale sia il suo orizzonte e aggiorno la Dcel (quindi la CH)
+ *      6. scorrendo tutti i punti rimanenti, controllo per ognuno quale sia il suo orizzonte
+ *      7. popolo/aggiorno il Conflict Graph alla luce della ConvexHull aggiornata
+ *      8. elimino le vecchie facce visibili dal punto (dalla Dcel e dal CG) delimitate dall'horizon del punto
+ *      9. aggiungo le nuove facce e aggiorno la Dcel e il Conflict Graph
+ *      10. infine, elimino il punto che ora fa parte del CH
  */
 void MyCHSolver::buildCH()
 {
@@ -33,34 +46,37 @@ void MyCHSolver::buildCH()
     //aggiungo le altre 3 facce per chiudere il tetraedro
     addFaces(list, vertexArray[3]);
 
+    //elimino i primi 4 punti facenti parte del tetraedro ed eseguo lo shuffle dei rimanenti
     randomizeVertexArray();
 
+    //se il bottone Show Phases è abilitato, aggiorno il canvas
     if(showPhases){
         dcel->update();
         this->mainWindow->updateGlCanvas();
     }
 
-    //inizializzo il conflict graph
+    //creo e inizializzo il conflict graph
     MyConflictGraph conflictGraph(dcel, vertexArray);
-    //inizializzo il conflict graph
     conflictGraph.initializeCG();
 
+    //dichiaro un vettore di half-edges che sarà il mio orizzonte
     std::vector<Dcel::HalfEdge*> horizon;
 
     //per ciascun vertice rimasto del modello in input, calcolo il corrispettivo orizzonte e computo la nuova CH
     for(auto pointIter = vertexArray.begin(); pointIter != vertexArray.end(); pointIter++)
     {
-        Pointd vertex = (*pointIter);
         //recupero il set di facce visibili dal vertice tramite un metodo d'appoggio
-        std::set<Dcel::Face*> *visibleFaces = conflictGraph.getFacesInConflict(vertex);
+        std::set<Dcel::Face*> *visibleFaces = conflictGraph.getFacesInConflict(*pointIter);
 
-        //computo l'orizzonte solo se il set di facce visibili ha almeno un elemento, altrimenti il punto è interno al CH
+        //computo l'orizzonte solo se il set di facce visibili ha almeno un elemento, altrimenti il punto è interno al CH e lo ignoro
         if(!visibleFaces->empty())
         {
             horizon = computeHorizon(visibleFaces);
 
+            //recupero tutti i vertici in conflitto con le facce visibili dal punto e anche dalle facce sottostanti l'orizzonte
             std::map<Dcel::HalfEdge*, std::set<Pointd>*> mapOfVerticesForCG = conflictGraph.lookForVerticesInConflict(horizon);
 
+            //elimino tutte le facce visibili dal vertice in esame sia dalla Dcel sia dal CG
             for(auto faceVisibleIter = visibleFaces->begin(); faceVisibleIter != visibleFaces->end(); faceVisibleIter++)
             {
                 conflictGraph.deleteFacesFromCG(*faceVisibleIter);
@@ -68,7 +84,7 @@ void MyCHSolver::buildCH()
             }
 
             //creo le nuove facce a partire dagli half-edge dell'orizzonte e il nuovo vertice in esame
-            std::vector<Dcel::Face*> newFaces = addFaces(horizon, vertex);
+            std::vector<Dcel::Face*> newFaces = addFaces(horizon, (*pointIter));
 
             //per tutti gli half-edge dell'orizzonte, e per ogni faccia appena creata, aggiorno entrambi i CG con le nuove facce
             for(auto horizonIter = horizon.begin(); horizonIter != horizon.end(); horizonIter++)
@@ -79,19 +95,21 @@ void MyCHSolver::buildCH()
                 }
             }
 
+            //se l'opzione "Show Phases" è abilitata, aggiorno il canvas
             if(showPhases){
                 dcel->update();
                 this->mainWindow->updateGlCanvas();
             }
         }
-        conflictGraph.deleteVertexFromCG(vertex);
+        //elimino il vertice dal CG che ora fa parte del CH
+        conflictGraph.deleteVertexFromCG(*pointIter);
     }
 }
 
 
 /**
  * @brief MyCHSolver::extractFourPoints estrae 4 punti random dalla dcel come vertici inziali del tetraedro
- * @return torna 1 o -1 a seconda del segno della matrice (ovvero indica in quale semispazio si trova il quarto punto rispetto
+ * @return rende 1 o -1 a seconda del segno della matrice (ovvero indica in quale semispazio si trova il quarto punto rispetto
  *          al semipiano formato dai primi 3 punti)
  */
 int MyCHSolver::extractFourPoints()
@@ -110,14 +128,14 @@ int MyCHSolver::extractFourPoints()
     size = vertexArray.size();
 
     //estraggo random 4 punti dividendo in 4 parti il vettore dei vertici (estraggo un punto in ognuno dei 4 range)
-    //finché i punti non sono complanari
+    //finché i punti sono complanari
     do
     {
         //estraggo 4 interi random che saranno l'indice del vettore che contiene i miei vertici
         a = rand() % size/4;
         b = size/4 + rand()% (size/2 - size/4);
         c = size/2 + rand()% (size/4*3 - size/2);
-        d = size/4*3 + rand()% (size - size/4*3 + 1);
+        d = size/4*3 + rand()% (size - size/4*3);
 
         //inserisco nel mio vettore provvisorio, nelle prime 4 posizioni, i miei 4 punti estratti
         fourPoints[0] = vertexArray[a];
@@ -136,6 +154,7 @@ int MyCHSolver::extractFourPoints()
     std::swap(vertexArray[2], vertexArray[c]);
     std::swap(vertexArray[3], vertexArray[d]);
 
+    //rendo il segno del determinante
     return coplanarity;
 }
 
@@ -145,7 +164,7 @@ int MyCHSolver::extractFourPoints()
  *          con annessi 3 vertici e 3 half-edges grazie al segno del determinante calcolato fra i primi 4 vertici. Infatti, se
  *          il determinante è < 0 allora dobbiamo settare le proprietà (next, fromVertex ecc) in un modo, altrimenti in verso opposto.
  * @param coplanarity mi serve per tenere il segno del determinante (< 0 oppure > 0)
- * @return torna una lista di half-edges che mi sarà utile per settare in maniera corretta e più semplice i twin degli half-edges
+ * @return rende una lista di half-edges che mi sarà utile per settare in maniera corretta e più semplice i twin degli half-edges
  */
 std::vector<Dcel::HalfEdge*> MyCHSolver::initializeTetrahedron(int coplanarity)
 {
@@ -223,11 +242,13 @@ std::vector<Dcel::HalfEdge*> MyCHSolver::initializeTetrahedron(int coplanarity)
     hf3->setFace(f);
 
     //inserisco i miei primi 3 half-edges in una lista di half-edge (mi sarà più comodo più avanti per i twin)
-    std::vector<Dcel::HalfEdge*> halfEdgeList;
-    halfEdgeList.push_back(hf1);
-    halfEdgeList.push_back(hf2);
-    halfEdgeList.push_back(hf3);
-    return halfEdgeList;
+    std::vector<Dcel::HalfEdge*> halfEdgeVector;
+    halfEdgeVector.push_back(hf1);
+    halfEdgeVector.push_back(hf2);
+    halfEdgeVector.push_back(hf3);
+
+    //rendo un vettore popolato coi primi 3 half-edge
+    return halfEdgeVector;
 }
 
 
@@ -235,20 +256,19 @@ std::vector<Dcel::HalfEdge*> MyCHSolver::initializeTetrahedron(int coplanarity)
  * @brief MyCHSolver::returnCoplanarity metodo che, presi 4 punti, mi rende 0 se i punti sono complanari, 1 o -1 se i punti non sono
  *          complanari e il segno mi dice in quale semispazio (sinistro o destro) sta il quarto punto rispetto al semipiano formato
  *          dagli altri 3 assieme
- * @param myVertexArray vettore di Pointd che memorizza tutti i vertici del modello in input (le prime 4 posizioni sono occupate proprio
- *          dai 4 punti di interesse)
+ * @param fourPoints vettore di 4 Pointd che memorizza i 4 vertici appena estratti
  * @return 0, 1 o -1
  */
-int MyCHSolver::returnCoplanarity(std::vector<Pointd> myVertexArray)
+int MyCHSolver::returnCoplanarity(std::vector<Pointd> fourPoints)
 {
     Eigen::Matrix4d mat;
 
     //popolo la matrice con le coordinate dei primi 4 punti
     for(int i=0; i<4; i++)
     {
-        mat(i,0) = myVertexArray[i].x();
-        mat(i,1) = myVertexArray[i].y();
-        mat(i,2) = myVertexArray[i].z();
+        mat(i,0) = fourPoints[i].x();
+        mat(i,1) = fourPoints[i].y();
+        mat(i,2) = fourPoints[i].z();
         mat(i,3) = 1;
     }
 
@@ -333,23 +353,27 @@ std::vector<Dcel::Face*> MyCHSolver::addFaces(std::vector<Dcel::HalfEdge*> list,
         faceList.push_back(currentFace);
     }
 
+    //setto i twin del tetraedro
     setTwins(faceList);
+
     return faceList;
 }
 
 
 /**
- * @brief MyCHSolver::setTwins metodo che mi permette di settare i twin per ogni half-edge presente nel tetraedro (sono in tutto 12)
- * @param listFace vettore che consta delle ultime 3 facce aggiunte alla Dcel
+ * @brief MyCHSolver::setTwins metodo che mi permette di settare i twin per ogni nuova faccia aggiunta nel Convex Hull
+ * @param listFace vettore che consta delle ultime facce aggiunte alla Dcel
  */
 void MyCHSolver::setTwins(std::vector<Dcel::Face*> listFace)
 {
-    //ciclo iterato sulla dimensione della listFace (sono 3 facce)
+    //ciclo iterato sulla dimensione della listFace
     for(auto faceIterator = listFace.begin(); faceIterator != listFace.end(); faceIterator++)
     {
         //prendo la faccia successiva a quella in esame ora
         auto next = std::next(faceIterator, 1);
+
         Dcel::HalfEdge *nextFaceOuterHE;
+
         //recupero l'outerHalfEdge della faccia corrente
         Dcel::HalfEdge *faceOuterHE = (*faceIterator)->getOuterHalfEdge();
 
@@ -363,7 +387,7 @@ void MyCHSolver::setTwins(std::vector<Dcel::Face*> listFace)
             nextFaceOuterHE = (*next)->getOuterHalfEdge();
         }
 
-        //setto come twin l'outerHalfEdge della faccia attuale con quello della prossima faccia
+        //setto come twin l'outerHalfEdge della faccia attuale con quello della prossima faccia e viceversa
         nextFaceOuterHE->getNext()->setTwin(faceOuterHE->getPrev());
         faceOuterHE->getPrev()->setTwin(nextFaceOuterHE->getNext());
     }
@@ -371,7 +395,7 @@ void MyCHSolver::setTwins(std::vector<Dcel::Face*> listFace)
 
 
 /**
- * @brief MyCHSolver::randomizeVertexArray breve metodo che mi permette di eliminare dal mio vettore di vertici i vertici
+ * @brief MyCHSolver::randomizeVertexArray metodo che mi permette di eliminare dal mio vettore di vertici i vertici
  *          facenti parte del tetraedro e di randomizzare i restanti vertici per andare a costruire la vera e propria CH
  */
 void MyCHSolver::randomizeVertexArray()
@@ -387,9 +411,8 @@ void MyCHSolver::randomizeVertexArray()
 /**
  * @brief MyCHSolver::computeHorizon metodo che computa l'orizzonte per un punto
  * @param setOfFaces insieme delle facce visibili dal punto in esame
- * @return torna il vettore di half-edge che compongono l'orizzonte del punto
+ * @return torna il vettore ordinato di half-edge che compongono l'orizzonte del punto
  */
-
 std::vector<Dcel::HalfEdge*> MyCHSolver::computeHorizon(std::set<Dcel::Face*>* setOfFaces)
 {
     std::vector<Dcel::HalfEdge*> horizon;
@@ -402,11 +425,13 @@ std::vector<Dcel::HalfEdge*> MyCHSolver::computeHorizon(std::set<Dcel::Face*>* s
         //allora quell'half-edge fa parte dell'orizzonte
         for(auto halfEdgeIterator = (*faceIterator)->incidentHalfEdgeBegin(); halfEdgeIterator != (*faceIterator)->incidentHalfEdgeEnd(); halfEdgeIterator++)
         {
+            //controllo che il twin dell'half-edge corrente sia effettivamente inizializzato
             if((*halfEdgeIterator)->getTwin() != nullptr)
             {
                 //se la faccia del twin del mio half-edge corrente non è nella lista delle facce visibili dal vertice
                 //allora inserisco l'half-edge corrente nell'orizzonte (che è ancora disordinato)
                 auto element = setOfFaces->find((*halfEdgeIterator)->getTwin()->getFace());
+
                 if(element == setOfFaces->end())
                 {
                     firstHE = (*halfEdgeIterator)->getTwin();
@@ -418,15 +443,18 @@ std::vector<Dcel::HalfEdge*> MyCHSolver::computeHorizon(std::set<Dcel::Face*>* s
         if(firstHE->getFromVertex() != nullptr) break;
     }
 
-    //inserisco il l'half-edge di partenza nel vettore che conterrà l'horizon
+    //inserisco l'half-edge di partenza nel vettore che conterrà l'horizon
     horizon.push_back(firstHE);
-    Dcel::HalfEdge* next= new Dcel::HalfEdge;
+
+    Dcel::HalfEdge* next = new Dcel::HalfEdge;
+
     if(firstHE->getNext()->getTwin() != nullptr){
         //inizializzo un half-edge che mi servirà per scorrere il boundary dell'orizzonte
         next = firstHE->getNext()->getTwin();
     }
+
     //finchè non sono arrivata all'half-edge iniziale (quindi non ho chiuso il giro)
-    while(next->getNext()!= firstHE)  //&& next->getNext()->getTwin()->getNext() != firstHE)
+    while(next->getNext()!= firstHE)
     {
         //se la faccia dell'half-edge corrente fa parte dell'insieme delle facce visibili, allora quell'HE fa parte dell'orizzonte
         if(setOfFaces->find(next->getFace()) != setOfFaces->end())
@@ -441,28 +469,31 @@ std::vector<Dcel::HalfEdge*> MyCHSolver::computeHorizon(std::set<Dcel::Face*>* s
         }
     }
 
-
     return horizon;
 }
 
 
-
 /**
- * @brief MyCHSolver::deleteFacesFromDcel
- * @param visibleFaces
+ * @brief MyCHSolver::deleteFacesFromDcel metodo che elimina le vecchie facce dalla Dcel
+ * @param visibleFaces facce da eliminare, sono quelle visibili dal nuovo punto
  */
 void MyCHSolver::deleteFacesFromDcel(Dcel::Face* visibleFace)
 {
+    //per ogni faccia visibile e per tutti gli half-edge di quella faccia
     for(auto heIter = visibleFace->incidentHalfEdgeBegin(); heIter != visibleFace->incidentHalfEdgeEnd(); heIter++)
     {
+        //recupero il fromVertex e il toVertex dell'half-edge in esame
         Dcel::Vertex *fromVertex = (*heIter)->getFromVertex();
         Dcel::Vertex *toVertex = (*heIter)->getToVertex();
 
+        //elimino l'half-edge
         dcel->deleteHalfEdge(*heIter);
 
+        //decremento la cardinalità dei vertici
         fromVertex->decrementCardinality();
         toVertex->decrementCardinality();
 
+        //se la cardinalità dei vertici è pari a 0, allora nessun half-edge vi è collegato e posso quindi eliminarlo
         if(fromVertex->getCardinality() == 0)
         {
             dcel->deleteVertex(fromVertex);
@@ -473,6 +504,6 @@ void MyCHSolver::deleteFacesFromDcel(Dcel::Face* visibleFace)
         }
 
     }
+    //infine elimino la faccia dalla Dcel
     dcel->deleteFace(visibleFace);
-
 }
