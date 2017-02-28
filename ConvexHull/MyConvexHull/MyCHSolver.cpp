@@ -5,6 +5,7 @@
  * Progetto "3D Convex Hull"
  *
  * Cristin Sanna 65033
+ * cristin.sanna93@gmail.com
  ********************************/
 
 
@@ -14,11 +15,22 @@
  * @param mainwindow necessaria per mostrare tutti gli step
  * @param showPhases settata a true se viene abilitata l'opzione "Show Phases" nella finestra principale
  */
-MyCHSolver::MyCHSolver(DrawableDcel *dcel, MainWindow *mainWindow, bool const &showPhases)
+MyCHSolver::MyCHSolver(DrawableDcel *dcel, MainWindow *mainWindow, bool const &updateModel)
 {
     this->dcel = dcel;
     this->mainWindow = mainWindow;
-    this->showPhases = showPhases;
+    this->updateModel = updateModel;
+}
+
+
+/**
+ * @brief MyCHSolver::~MyCHSolver distruttore della main class. Distruggo l'istanza della classe MyConflictGraph
+ */
+MyCHSolver::~MyCHSolver()
+{
+    delete conflictGraph;
+    facesList.clear();
+    vertexArray.clear();
 }
 
 
@@ -50,14 +62,13 @@ void MyCHSolver::buildCH()
     randomizeVertexArray();
 
     //se il bottone Show Phases è abilitato, aggiorno il canvas
-    if(showPhases){
-        dcel->update();
-        this->mainWindow->updateGlCanvas();
+    if(updateModel){
+        updateCanvas();
     }
 
     //creo e inizializzo il conflict graph
-    MyConflictGraph conflictGraph(dcel, vertexArray);
-    conflictGraph.initializeCG();
+    conflictGraph = new MyConflictGraph(dcel, vertexArray);
+    conflictGraph->initializeCG();
 
     //dichiaro un vettore di half-edges che sarà il mio orizzonte
     std::vector<Dcel::HalfEdge*> horizon;
@@ -66,7 +77,7 @@ void MyCHSolver::buildCH()
     for(auto pointIter = vertexArray.begin(); pointIter != vertexArray.end(); pointIter++)
     {
         //recupero il set di facce visibili dal vertice tramite un metodo d'appoggio
-        std::set<Dcel::Face*> *visibleFaces = conflictGraph.getFacesInConflict(*pointIter);
+        std::set<Dcel::Face*> *visibleFaces = conflictGraph->getFacesInConflict(*pointIter);
 
         //computo l'orizzonte solo se il set di facce visibili ha almeno un elemento, altrimenti il punto è interno al CH e lo ignoro
         if(!visibleFaces->empty())
@@ -74,12 +85,12 @@ void MyCHSolver::buildCH()
             horizon = computeHorizon(visibleFaces);
 
             //recupero tutti i vertici in conflitto con le facce visibili dal punto e anche dalle facce sottostanti l'orizzonte
-            std::map<Dcel::HalfEdge*, std::set<Pointd>*> mapOfVerticesForCG = conflictGraph.lookForVerticesInConflict(horizon);
+            std::map<Dcel::HalfEdge*, std::set<Pointd>*> mapOfVerticesForCG = conflictGraph->lookForVerticesInConflict(horizon);
 
             //elimino tutte le facce visibili dal vertice in esame sia dalla Dcel sia dal CG
             for(auto faceVisibleIter = visibleFaces->begin(); faceVisibleIter != visibleFaces->end(); faceVisibleIter++)
             {
-                conflictGraph.deleteFacesFromCG(*faceVisibleIter);
+                conflictGraph->deleteFacesFromCG(*faceVisibleIter);
                 deleteFacesFromDcel(*faceVisibleIter);
             }
 
@@ -91,19 +102,24 @@ void MyCHSolver::buildCH()
             {
                 for(auto faceIter = newFaces.begin(); faceIter != newFaces.end(); faceIter++)
                 {
-                    conflictGraph.updateBothCG((*faceIter), mapOfVerticesForCG[*horizonIter]);
+                    conflictGraph->updateBothCG((*faceIter), mapOfVerticesForCG[*horizonIter]);
                 }
             }
 
             //se l'opzione "Show Phases" è abilitata, aggiorno il canvas
-            if(showPhases){
-                dcel->update();
-                this->mainWindow->updateGlCanvas();
+            if(updateModel){
+                updateCanvas();
             }
         }
         //elimino il vertice dal CG che ora fa parte del CH
-        conflictGraph.deleteVertexFromCG(*pointIter);
+        conflictGraph->deleteVertexFromCG(*pointIter);
     }
+}
+
+void MyCHSolver::updateCanvas()
+{
+    dcel->update();
+    mainWindow->updateGlCanvas();
 }
 
 

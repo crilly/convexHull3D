@@ -59,11 +59,12 @@ void ConvexHullManager::on_convexHullPushButton_clicked() {
              * Begin Convex Hull Algorithm  *
              ********************************/
 
-            bool showPhases = false;
+            bool updateModel = false;
             if(ui->showPhasesCheckBox->isChecked()){
-               showPhases = true;
+               updateModel = true;
             }
-            MyCHSolver myCHSolver(dcel, mainWindow, showPhases);
+
+            MyCHSolver myCHSolver(dcel, mainWindow, updateModel);
             myCHSolver.buildCH();
 
             /********************************

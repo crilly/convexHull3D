@@ -16,9 +16,10 @@ class MyCHSolver
 private:
     DrawableDcel *dcel;
     MainWindow *mainWindow;
-    bool showPhases;
+    bool updateModel;
     int a, b, c, d;
-    double det = 0.0;    
+    double det = 0.0;
+    MyConflictGraph *conflictGraph;
 
     int returnCoplanarity(std::vector<Pointd>);
     int extractFourPoints();
@@ -26,14 +27,16 @@ private:
     std::vector<Dcel::Face*> addFaces(std::vector<Dcel::HalfEdge*>, Pointd);
     void setTwins(std::vector<Dcel::Face*>);
     void randomizeVertexArray();    
-    std::vector<Dcel::HalfEdge*> computeHorizon(std::set<Dcel::Face*>*);
+    std::vector<Dcel::HalfEdge*> computeHorizon(std::set<Dcel::Face*>*);    
+    void updateCanvas();
 
 public:
-    MyCHSolver(DrawableDcel *dcel, MainWindow *mainWindow, bool const &showPhases);
+    MyCHSolver(DrawableDcel *, MainWindow *, bool const &);
+    ~MyCHSolver();
     void buildCH();
     std::vector<Dcel::Face*> facesList;
     std::vector<Pointd> vertexArray;
-    void deleteFacesFromDcel(Dcel::Face *visibleFace);
+    void deleteFacesFromDcel(Dcel::Face *);
 };
 
 #endif // MYDCEL_H

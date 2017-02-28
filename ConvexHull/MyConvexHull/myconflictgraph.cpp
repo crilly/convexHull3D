@@ -5,6 +5,7 @@
  * Progetto "3D Convex Hull"
  *
  * Cristin Sanna 65033
+ * cristin.sanna93@gmail.com
  ********************************/
 
 
@@ -17,6 +18,17 @@ MyConflictGraph::MyConflictGraph(DrawableDcel *dcel, std::vector<Pointd> vertexA
 {
     this->dcel = dcel;
     this->vertexArray = vertexArray;
+}
+
+
+/**
+ * @brief MyConflictGraph::~MyConflictGraph distruttore della classe
+ */
+MyConflictGraph::~MyConflictGraph(){
+    conflictFaces.clear();
+    conflictVertices.clear();
+    vertexArray.clear();
+
 }
 
 
@@ -66,13 +78,14 @@ void MyConflictGraph::initializeCG()
 
     //per tutte le facce della dcel, scorro tutti i vertici del modello rimanenti
     //in particolare aggiungo alla matrice della faccia già inizializzata in ultima riga le coordinate del nuovo vertice da controllare
-    for(auto iterator = dcel->faceBegin(); iterator != dcel->faceEnd(); ++iterator)
+    for(auto faceIterator = dcel->faceBegin(); faceIterator != dcel->faceEnd(); faceIterator++)
     {
-        Dcel::Face *currentFace = (*iterator);
+        Dcel::Face *currentFace = (*faceIterator);
 
         //scorro il mio vettore di vertici del modello (tranne i primi 4 che fanno parte del tetraedro)
-        for (auto iterVert = vertexArray.begin(); iterVert != vertexArray.end(); iterVert++ )
+        for (auto iterVert = vertexArray.begin(); iterVert != vertexArray.end(); iterVert++)
         {
+            //setto l'ultima riga della matrice con le coordinate del vertice in esame
             matrices[currentFace->getId()](3, 0) = (*iterVert).x();
             matrices[currentFace->getId()](3, 1) = (*iterVert).y();
             matrices[currentFace->getId()](3, 2) = (*iterVert).z();
@@ -81,7 +94,7 @@ void MyConflictGraph::initializeCG()
             auto det = matrices[currentFace->getId()].determinant();
 
             //se il determinante è minore di -epsilon macchina, allora la faccia vede il punto (così come mostrato nelle slides del corso)
-            //e dovrò andare a inserirli nel CG, altrimenti non faccio nulla
+            //e dovrò andare a inserirli nel CG, altrimenti ignoro il punto
             if(det < -std::numeric_limits<double>::epsilon())
             {
                 //metodi d'appoggio per andare a inserire facce e vertici nei rispettivi CG
@@ -98,7 +111,7 @@ void MyConflictGraph::initializeCG()
  * @param v vertice chiave della mappa
  * @param f faccia in conflitto col vertice da inserire nel set con chiave v
  */
-void MyConflictGraph::addFaceToVConflict(Pointd &v, Dcel::Face* f)
+void MyConflictGraph::addFaceToVConflict(Pointd &v, Dcel::Face *f)
 {    
     //controllo se la mia chiave "v" esiste: se no, creo un nuovo set di facce
     if(conflictVertices.find(v) == conflictVertices.end())
@@ -133,8 +146,9 @@ void MyConflictGraph::addVertexToFConflict(Dcel::Face *f, Pointd &v)
  * @param point punto da usare come chiave della mappa conflictVertices
  * @return rendo un set di facce in conflitto con il punto passato come input
  */
-std::set<Dcel::Face*>* MyConflictGraph::getFacesInConflict(Pointd &v){
-
+std::set<Dcel::Face*>* MyConflictGraph::getFacesInConflict(Pointd &v)
+{
+    //recupero il set di facce in conflitto col punto
     std::set<Dcel::Face*> *setOfFacesInConflict = conflictVertices[v];
 
     // se non ha trovato elementi inizializzo un set vuoto
@@ -156,8 +170,9 @@ std::set<Dcel::Face*>* MyConflictGraph::getFacesInConflict(Pointd &v){
  * @param f faccia da usare come chiave della mappa conflictFaces
  * @return rendo un set di punti in conflitto con la faccia passata come input
  */
-std::set<Pointd>* MyConflictGraph::getVerticesInConflict(Dcel::Face* f){
-
+std::set<Pointd>* MyConflictGraph::getVerticesInConflict(Dcel::Face* f)
+{
+    //recupero il set di vertici in conflitto con la faccia
     std::set<Pointd> *setOfVerticesInConflict = conflictFaces[f];
 
     // se non ha trovato elementi inizializzo un set vuoto
@@ -175,21 +190,25 @@ std::set<Pointd>* MyConflictGraph::getVerticesInConflict(Dcel::Face* f){
 
 
 /**
- * @brief MyConflictGraph::lookForVerticesInConflict ricerca dei vertici in
- * @param myHorizon
- * @return
+ * @brief MyConflictGraph::lookForVerticesInConflict ricerca dei vertici in conflitto sia con le facce visibili dal punto e quindi da distruggere,
+ *          sia con le facce aventi un half-edge in comune con l'orizzonte
+ * @param myHorizon orizzonte del punto corrente
+ * @return rendo una mappa di half-edge (dell'orizzonte) e punti. Per ogni half-edge dell'orizzonte ho il set di punti associati
  */
 std::map<Dcel::HalfEdge*, std::set<Pointd>*> MyConflictGraph::lookForVerticesInConflict(std::vector<Dcel::HalfEdge*> myHorizon)
 {
     std::map<Dcel::HalfEdge*, std::set<Pointd>*> mapOfVerticesForCG;
 
+    //per ogni half-edge dell'orizzonte recupero i vertici in conflitto sia con la faccia sotto l'half-edge, sia con la faccia sopra
     for(auto horizonIter = myHorizon.begin(); horizonIter != myHorizon.end(); horizonIter++)
     {
         std::set<Pointd> *setPointsHorizon = getVerticesInConflict((*horizonIter)->getFace());
         std::set<Pointd> *setPointsHorizonTwin = getVerticesInConflict((*horizonIter)->getTwin()->getFace());
 
+        //fondo i due set di punti trovato in uno unico
         setPointsHorizon->insert(setPointsHorizonTwin->begin(), setPointsHorizonTwin->end());
 
+        //inserisco il set di punti trovati nella mappa alla chiave dell'he dell'orizzonte corrente
         mapOfVerticesForCG[*horizonIter] = setPointsHorizon;
     }
 
@@ -198,71 +217,71 @@ std::map<Dcel::HalfEdge*, std::set<Pointd>*> MyConflictGraph::lookForVerticesInC
 
 
 /**
- * @brief MyConflictGraph::deleteFacesFromCG
- * @param visibleFaces
+ * @brief MyConflictGraph::deleteFacesFromCG metodo che elimina il set di facce visibili dal nuovo punto dai rispettivi conflict graph
+ * @param visibleFaces faccia visibile dal nuovo punto (da eliminare)
  */
 void MyConflictGraph::deleteFacesFromCG(Dcel::Face *visibleFace)
-{
+{    
+    //recupero il set di punti in conflitto con la faccia da eliminare
+    std::set<Pointd> *visiblePoints = conflictFaces[visibleFace];
 
-        std::set<Pointd> *visiblePoints = conflictFaces[visibleFace];
+    //per ogni punto trovato, vado ad eliminare la faccia da distruggere dalla sua lista
+    for(auto pointIter = visiblePoints->begin(); pointIter != visiblePoints->end(); pointIter++)
+    {
+        conflictVertices[*pointIter]->erase(visibleFace);
+    }
 
-        //infine elimino la faccia dal CG delle facce
-        conflictFaces.erase(visibleFace);
-
-//        //se trovo punti, allora li devo eliminare (ovvero se la faccia da distruggere era visibile da qualche punto)
-//        if(visiblePoints != nullptr)
-//        {
-            //per ogni punto trovato, vado ad eliminare la faccia da distruggere dalla sua lista
-            for(auto pointIter = visiblePoints->begin(); pointIter != visiblePoints->end(); pointIter++)
-            {
-                conflictVertices[*pointIter]->erase(visibleFace);
-            }
-
-
-//        }
-
+    //infine elimino la faccia dal CG delle facce
+    conflictFaces.erase(visibleFace);
 }
 
 
 /**
- * @brief MyConflictGraph::isVisible
- * @param vertex
- * @param face
- * @return
+ * @brief MyConflictGraph::isVisible metodo che, presi una faccia e un punto, rende true se la faccia vede il punto, false altrimenti
+ * @param vertex vertice in esame
+ * @param face faccia in esame
+ * @return true se i due sono in conflitto, false altrimenti
  */
 bool MyConflictGraph::isVisible(Dcel::Face *face, Pointd point) const{
 
     Eigen::Matrix4d matrix;
     int i=0;
 
+    //itero per gli half-edge della faccia in input
     for(auto heIter = face->incidentHalfEdgeBegin(); heIter != face->incidentHalfEdgeEnd(); heIter++, i++)
     {
+        //setto le prime 3 righe con le coordinate dei vertici della faccia
         matrix(i,0) = (*heIter)->getFromVertex()->getCoordinate().x();
         matrix(i,1) = (*heIter)->getFromVertex()->getCoordinate().y();
         matrix(i,2) = (*heIter)->getFromVertex()->getCoordinate().z();
         matrix(i,3) = 1;
     }
 
+    //setto l'ultima riga con le coordinate del nuovo punto
     matrix(3,0) = point.x();
     matrix(3,1) = point.y();
     matrix(3,2) = point.z();
     matrix(3,3) = 1;
 
+    //se il determinante è negativo, la faccia vede il punto quindi rendo true, false altrimenti
     if(matrix.determinant() < -std::numeric_limits<double>::epsilon()) return true;
     else return false;
 }
 
 
 /**
- * @brief MyConflictGraph::updateBothCG
- * @param newFace
- * @param verticesSet
+ * @brief MyConflictGraph::updateBothCG metodo che aggiorna il conflictgraph delle facce e quello dei vertici dopo che la CH è cambiata
+ * @param newFace nuova faccia costruita
+ * @param verticesSet set di vertici da controllare
  */
 void MyConflictGraph::updateBothCG(Dcel::Face *newFace, std::set<Pointd> *verticesSet)
 {
+    //per tutti i vertici controllo che la faccia li veda o meno
     for(auto pointIter = verticesSet->begin(); pointIter != verticesSet->end(); pointIter++)
     {
         Pointd point = (*pointIter);
+
+        //se la faccia e il punto sono in conflitto, allora devo andare ad aggiornare i conflict graph di entrambi
         if(isVisible(newFace, point))
         {
             addFaceToVConflict(point, newFace);
@@ -273,18 +292,22 @@ void MyConflictGraph::updateBothCG(Dcel::Face *newFace, std::set<Pointd> *vertic
 
 
 /**
- * @brief MyConflictGraph::deleteVertexFromCG
- * @param point
+ * @brief MyConflictGraph::deleteVertexFromCG una volta che un nuovo punto entra a far parte del Convex Hull, allora devo eliminarlo
+ *          dai conflict graph, poiché non è più in conflitto con nessuna faccia
+ * @param point punto da eliminare
  */
 void MyConflictGraph::deleteVertexFromCG(Pointd &point)
 {
+    //mi recupero il set di facce che erano precedentemente in conflitto col punto da eliminare
     std::set<Dcel::Face*> *facesInConflict = getFacesInConflict(point);
 
-    conflictVertices.erase(point);
-
+    //per ogni faccia trovata, vado a eliminare il vertice nel set di vertici corrispondenti al conflict graph della faccia
     for(auto faceIter = facesInConflict->begin(); faceIter != facesInConflict->end(); faceIter++)
     {
         conflictFaces[*faceIter]->erase(point);
     }
+
+    //infine elimino il vertice dal conflict graph dei vertici
+    conflictVertices.erase(point);
 
 }

@@ -15,19 +15,21 @@ private:
     void addVertexToFConflict(Dcel::Face *, Pointd &);
 
 public:
-    DrawableDcel *dcel;
-    std::vector<Pointd> vertexArray;
     MyConflictGraph(DrawableDcel*, std::vector<Pointd>);
+    ~MyConflictGraph();
+    DrawableDcel *dcel;
+    std::vector<Pointd> vertexArray;    
     std::map<Dcel::Face*, std::set<Pointd>*> conflictFaces;
     std::map<Pointd, std::set<Dcel::Face*>*> conflictVertices;
+
     void initializeCG();    
     std::set<Dcel::Face*>* getFacesInConflict(Pointd &);
-    std::set<Pointd> *getVerticesInConflict(Dcel::Face *f);
-    std::map<Dcel::HalfEdge *, std::set<Pointd> *> lookForVerticesInConflict(std::vector<Dcel::HalfEdge *> myHorizon);
-    void deleteFacesFromCG(Dcel::Face *visibleFace);
-    void deleteVertexFromCG(Pointd &point);
-    bool isVisible(Dcel::Face *face, Pointd point) const;
-    void updateBothCG(Dcel::Face *newFace, std::set<Pointd> *verticesSet);
+    std::set<Pointd> *getVerticesInConflict(Dcel::Face *);
+    std::map<Dcel::HalfEdge*, std::set<Pointd>*> lookForVerticesInConflict(std::vector<Dcel::HalfEdge*>);
+    void deleteFacesFromCG(Dcel::Face *);
+    void deleteVertexFromCG(Pointd &);
+    bool isVisible(Dcel::Face *, Pointd) const;
+    void updateBothCG(Dcel::Face *, std::set<Pointd> *);
 };
 
 #endif // MYCONFLICTGRAPH_H
