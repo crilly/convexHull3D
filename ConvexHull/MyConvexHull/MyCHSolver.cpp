@@ -116,6 +116,10 @@ void MyCHSolver::buildCH()
     }
 }
 
+
+/**
+ * @brief MyCHSolver::updateCanvas metodo che mi permette di aggiornare il canvas se il bottone "show phases" è abilitato
+ */
 void MyCHSolver::updateCanvas()
 {
     dcel->update();
@@ -182,7 +186,7 @@ int MyCHSolver::extractFourPoints()
  * @param coplanarity mi serve per tenere il segno del determinante (< 0 oppure > 0)
  * @return rende una lista di half-edges che mi sarà utile per settare in maniera corretta e più semplice i twin degli half-edges
  */
-std::vector<Dcel::HalfEdge*> MyCHSolver::initializeTetrahedron(int coplanarity)
+std::vector<Dcel::HalfEdge*> MyCHSolver::initializeTetrahedron(const int coplanarity)
 {
     //svuoto la Dcel
     dcel->reset();
@@ -275,7 +279,7 @@ std::vector<Dcel::HalfEdge*> MyCHSolver::initializeTetrahedron(int coplanarity)
  * @param fourPoints vettore di 4 Pointd che memorizza i 4 vertici appena estratti
  * @return 0, 1 o -1
  */
-int MyCHSolver::returnCoplanarity(std::vector<Pointd> fourPoints)
+int MyCHSolver::returnCoplanarity(const std::vector<Pointd> fourPoints) const
 {
     Eigen::Matrix4d mat;
 
@@ -289,7 +293,7 @@ int MyCHSolver::returnCoplanarity(std::vector<Pointd> fourPoints)
     }
 
     //calcolo il determinante
-    det = mat.determinant();
+    double det = mat.determinant();
 
     //se il determinante è compreso in questo intervallo, i punti sono complanari e resetto il valore del determinante per comodità
     bool sign = det > -std::numeric_limits<double>::epsilon() && det < std::numeric_limits<double>::epsilon();
@@ -314,7 +318,7 @@ int MyCHSolver::returnCoplanarity(std::vector<Pointd> fourPoints)
  * @param newVertex è il quarto vertice da aggiungere per chiudere l'inizializzazione del tetraedro, corrisponde al quarto punto estratto
  * @return torno un vettore di facce contenente le nuove tre facce appena create (verrà utilizzato per settare correttamente i twin)
  */
-std::vector<Dcel::Face*> MyCHSolver::addFaces(std::vector<Dcel::HalfEdge*> list, Pointd newVertex)
+std::vector<Dcel::Face*> MyCHSolver::addFaces(std::vector<Dcel::HalfEdge*> list, const Pointd newVertex)
 {
     //inizializzo una lista di facce che mi servirà per settare correttamente i twin del tetraedro
     std::vector<Dcel::Face*> faceList;
@@ -380,7 +384,7 @@ std::vector<Dcel::Face*> MyCHSolver::addFaces(std::vector<Dcel::HalfEdge*> list,
  * @brief MyCHSolver::setTwins metodo che mi permette di settare i twin per ogni nuova faccia aggiunta nel Convex Hull
  * @param listFace vettore che consta delle ultime facce aggiunte alla Dcel
  */
-void MyCHSolver::setTwins(std::vector<Dcel::Face*> listFace)
+void MyCHSolver::setTwins(const std::vector<Dcel::Face*> listFace) const
 {
     //ciclo iterato sulla dimensione della listFace
     for(auto faceIterator = listFace.begin(); faceIterator != listFace.end(); faceIterator++)
@@ -429,10 +433,10 @@ void MyCHSolver::randomizeVertexArray()
  * @param setOfFaces insieme delle facce visibili dal punto in esame
  * @return torna il vettore ordinato di half-edge che compongono l'orizzonte del punto
  */
-std::vector<Dcel::HalfEdge*> MyCHSolver::computeHorizon(std::set<Dcel::Face*>* setOfFaces)
+std::vector<Dcel::HalfEdge*> MyCHSolver::computeHorizon(const std::set<Dcel::Face*> *setOfFaces)
 {
     std::vector<Dcel::HalfEdge*> horizon;
-    Dcel::HalfEdge* firstHE= new Dcel::HalfEdge;
+    Dcel::HalfEdge* firstHE = new Dcel::HalfEdge;
 
     //per tutte le facce nel conflict graph del vertice corrente, controllo quali fanno parte dell'orizzonte
     for(auto faceIterator = setOfFaces->begin(); faceIterator != setOfFaces->end(); faceIterator++)
@@ -518,8 +522,8 @@ void MyCHSolver::deleteFacesFromDcel(Dcel::Face* visibleFace)
         {
             dcel->deleteVertex(toVertex);
         }
-
     }
+
     //infine elimino la faccia dalla Dcel
     dcel->deleteFace(visibleFace);
 }

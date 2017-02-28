@@ -38,7 +38,7 @@ MyConflictGraph::~MyConflictGraph(){
  * @param faceID ID della faccia dalla quale prendere i vertici
  * @param matrix riferimento alla matrice che vogliamo popolare (serve come indice del vettore di matrici "matrices")
  */
-void MyConflictGraph::createMatrixForFace(int faceID, Eigen::Matrix4d &matrix)
+void MyConflictGraph::createMatrixForFace(const int faceID, Eigen::Matrix4d &matrix)
 {
     //parto dall'outerHE della faccia corrente e mi recupero le coordinate del suo fromVertex
     Dcel::HalfEdge *currentHE = dcel->getFace(faceID)->getOuterHalfEdge();
@@ -111,7 +111,7 @@ void MyConflictGraph::initializeCG()
  * @param v vertice chiave della mappa
  * @param f faccia in conflitto col vertice da inserire nel set con chiave v
  */
-void MyConflictGraph::addFaceToVConflict(Pointd &v, Dcel::Face *f)
+void MyConflictGraph::addFaceToVConflict(const Pointd &v, Dcel::Face *f)
 {    
     //controllo se la mia chiave "v" esiste: se no, creo un nuovo set di facce
     if(conflictVertices.find(v) == conflictVertices.end())
@@ -129,7 +129,7 @@ void MyConflictGraph::addFaceToVConflict(Pointd &v, Dcel::Face *f)
  * @param f faccia chiave della mappa
  * @param v vertice in conflitto con la faccia da inserire nel set con chiave f
  */
-void MyConflictGraph::addVertexToFConflict(Dcel::Face *f, Pointd &v)
+void MyConflictGraph::addVertexToFConflict(Dcel::Face *f, const Pointd &v)
 {
     //controllo se la mia chiave "f" esiste: se no, creo un nuovo set di punti
     if(conflictFaces.find(f) == conflictFaces.end())
@@ -146,7 +146,7 @@ void MyConflictGraph::addVertexToFConflict(Dcel::Face *f, Pointd &v)
  * @param point punto da usare come chiave della mappa conflictVertices
  * @return rendo un set di facce in conflitto con il punto passato come input
  */
-std::set<Dcel::Face*>* MyConflictGraph::getFacesInConflict(Pointd &v)
+std::set<Dcel::Face*>* MyConflictGraph::getFacesInConflict(const Pointd &v)
 {
     //recupero il set di facce in conflitto col punto
     std::set<Dcel::Face*> *setOfFacesInConflict = conflictVertices[v];
@@ -195,7 +195,7 @@ std::set<Pointd>* MyConflictGraph::getVerticesInConflict(Dcel::Face* f)
  * @param myHorizon orizzonte del punto corrente
  * @return rendo una mappa di half-edge (dell'orizzonte) e punti. Per ogni half-edge dell'orizzonte ho il set di punti associati
  */
-std::map<Dcel::HalfEdge*, std::set<Pointd>*> MyConflictGraph::lookForVerticesInConflict(std::vector<Dcel::HalfEdge*> myHorizon)
+std::map<Dcel::HalfEdge*, std::set<Pointd>*> MyConflictGraph::lookForVerticesInConflict(const std::vector<Dcel::HalfEdge*> myHorizon)
 {
     std::map<Dcel::HalfEdge*, std::set<Pointd>*> mapOfVerticesForCG;
 
@@ -242,8 +242,8 @@ void MyConflictGraph::deleteFacesFromCG(Dcel::Face *visibleFace)
  * @param face faccia in esame
  * @return true se i due sono in conflitto, false altrimenti
  */
-bool MyConflictGraph::isVisible(Dcel::Face *face, Pointd point) const{
-
+bool MyConflictGraph::isVisible(const Dcel::Face *face, const Pointd point) const
+{
     Eigen::Matrix4d matrix;
     int i=0;
 

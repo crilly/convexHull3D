@@ -18,16 +18,15 @@ private:
     MainWindow *mainWindow;
     bool updateModel;
     int a, b, c, d;
-    double det = 0.0;
     MyConflictGraph *conflictGraph;
 
-    int returnCoplanarity(std::vector<Pointd>);
+    int returnCoplanarity(const std::vector<Pointd>) const;
     int extractFourPoints();
-    std::vector<Dcel::HalfEdge*> initializeTetrahedron(int);
-    std::vector<Dcel::Face*> addFaces(std::vector<Dcel::HalfEdge*>, Pointd);
-    void setTwins(std::vector<Dcel::Face*>);
+    std::vector<Dcel::HalfEdge*> initializeTetrahedron(const int);
+    std::vector<Dcel::Face*> addFaces(std::vector<Dcel::HalfEdge*>, const Pointd);
+    void setTwins(const std::vector<Dcel::Face*>) const;
     void randomizeVertexArray();    
-    std::vector<Dcel::HalfEdge*> computeHorizon(std::set<Dcel::Face*>*);    
+    std::vector<Dcel::HalfEdge*> computeHorizon(const std::set<Dcel::Face*>*);
     void updateCanvas();
 
 public:

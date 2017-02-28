@@ -10,9 +10,9 @@
 class MyConflictGraph
 {
 private:
-    void createMatrixForFace(int, Eigen::Matrix4d &);
-    void addFaceToVConflict(Pointd &, Dcel::Face *);
-    void addVertexToFConflict(Dcel::Face *, Pointd &);
+    void createMatrixForFace(const int, Eigen::Matrix4d &);
+    void addFaceToVConflict(const Pointd &, Dcel::Face *);
+    void addVertexToFConflict(Dcel::Face *, const Pointd &);
 
 public:
     MyConflictGraph(DrawableDcel*, std::vector<Pointd>);
@@ -23,12 +23,12 @@ public:
     std::map<Pointd, std::set<Dcel::Face*>*> conflictVertices;
 
     void initializeCG();    
-    std::set<Dcel::Face*>* getFacesInConflict(Pointd &);
+    std::set<Dcel::Face*>* getFacesInConflict(const Pointd &);
     std::set<Pointd> *getVerticesInConflict(Dcel::Face *);
-    std::map<Dcel::HalfEdge*, std::set<Pointd>*> lookForVerticesInConflict(std::vector<Dcel::HalfEdge*>);
+    std::map<Dcel::HalfEdge*, std::set<Pointd>*> lookForVerticesInConflict(const std::vector<Dcel::HalfEdge*>);
     void deleteFacesFromCG(Dcel::Face *);
     void deleteVertexFromCG(Pointd &);
-    bool isVisible(Dcel::Face *, Pointd) const;
+    bool isVisible(const Dcel::Face *, const Pointd) const;
     void updateBothCG(Dcel::Face *, std::set<Pointd> *);
 };
 
