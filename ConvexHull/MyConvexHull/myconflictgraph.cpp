@@ -274,7 +274,7 @@ bool MyConflictGraph::isVisible(const Dcel::Face *face, const Pointd point) cons
  * @param newFace nuova faccia costruita
  * @param verticesSet set di vertici da controllare
  */
-void MyConflictGraph::updateBothCG(Dcel::Face *newFace, std::set<Pointd> *verticesSet)
+void MyConflictGraph::updateBothCG(Dcel::Face *newFace, const std::set<Pointd> *verticesSet)
 {
     //per tutti i vertici controllo che la faccia li veda o meno
     for(auto pointIter = verticesSet->begin(); pointIter != verticesSet->end(); pointIter++)
@@ -296,7 +296,7 @@ void MyConflictGraph::updateBothCG(Dcel::Face *newFace, std::set<Pointd> *vertic
  *          dai conflict graph, poiché non è più in conflitto con nessuna faccia
  * @param point punto da eliminare
  */
-void MyConflictGraph::deleteVertexFromCG(Pointd &point)
+void MyConflictGraph::deleteVertexFromCG(const Pointd &point)
 {
     //mi recupero il set di facce che erano precedentemente in conflitto col punto da eliminare
     std::set<Dcel::Face*> *facesInConflict = getFacesInConflict(point);

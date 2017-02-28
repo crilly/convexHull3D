@@ -27,9 +27,9 @@ public:
     std::set<Pointd> *getVerticesInConflict(Dcel::Face *);
     std::map<Dcel::HalfEdge*, std::set<Pointd>*> lookForVerticesInConflict(const std::vector<Dcel::HalfEdge*>);
     void deleteFacesFromCG(Dcel::Face *);
-    void deleteVertexFromCG(Pointd &);
+    void deleteVertexFromCG(const Pointd &);
     bool isVisible(const Dcel::Face *, const Pointd) const;
-    void updateBothCG(Dcel::Face *, std::set<Pointd> *);
+    void updateBothCG(Dcel::Face *, const std::set<Pointd> *);
 };
 
 #endif // MYCONFLICTGRAPH_H
