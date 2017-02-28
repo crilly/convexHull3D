@@ -38,14 +38,14 @@ MyCHSolver::~MyCHSolver()
  * @brief MyCHSolver::buildCH è il mio main method che si occupa di costruire la ConvexHull in diversi step:
  *      1. estrae 4 punti random dalla Dcel del modello in input (controllando che non siano complanari)
  *      2. inizializza la Dcel con i primi 3 punti estratti (e di conseguenza la prima faccia)
- *      3. aggiunge il quarto punto costruendo il primo tetraedro (settando rispettivi half-edges, twind, faces ecc.)
+ *      3. aggiunge il quarto punto costruendo il primo tetraedro (settando rispettivi half-edges, twins, faces ecc.)
  *      4. a partire dal tetraedro, inizializzo il mio conflict graph per tenere traccia delle facce e vertici in conflitto
  *      5. elimino i 4 vertici del tetraedro dal mio vettore di vertici (Pointd) e chiamo la funzione shuffle per disordinare i punti
- *      6. scorrendo tutti i punti rimanenti, controllo per ognuno quale sia il suo orizzonte
+ *      6. scorrendo tutti i punti rimanenti, calcolo per ognuno il suo orizzonte
  *      7. popolo/aggiorno il Conflict Graph alla luce della ConvexHull aggiornata
  *      8. elimino le vecchie facce visibili dal punto (dalla Dcel e dal CG) delimitate dall'horizon del punto
  *      9. aggiungo le nuove facce e aggiorno la Dcel e il Conflict Graph
- *      10. infine, elimino il punto che ora fa parte del CH
+ *      10. infine, elimino il punto che ora fa parte del Convex Hull
  */
 void MyCHSolver::buildCH()
 {
@@ -61,19 +61,19 @@ void MyCHSolver::buildCH()
     //elimino i primi 4 punti facenti parte del tetraedro ed eseguo lo shuffle dei rimanenti
     randomizeVertexArray();
 
-    //se il bottone Show Phases è abilitato, aggiorno il canvas
+    //se il bottone Show Phases è abilitato, aggiorno il canvas per visualizzare il tetraedro
     if(updateModel){
         updateCanvas();
     }
 
-    //creo e inizializzo il conflict graph
+    //istanzio e inizializzo il conflict graph
     conflictGraph = new MyConflictGraph(dcel, vertexArray);
     conflictGraph->initializeCG();
 
     //dichiaro un vettore di half-edges che sarà il mio orizzonte
     std::vector<Dcel::HalfEdge*> horizon;
 
-    //per ciascun vertice rimasto del modello in input, calcolo il corrispettivo orizzonte e computo la nuova CH
+    //per ciascun vertice rimasto del modello in input, calcolo il corrispettivo orizzonte e computo la nuova Covex Hull
     for(auto pointIter = vertexArray.begin(); pointIter != vertexArray.end(); pointIter++)
     {
         //recupero il set di facce visibili dal vertice tramite un metodo d'appoggio
@@ -111,6 +111,7 @@ void MyCHSolver::buildCH()
                 updateCanvas();
             }
         }
+
         //elimino il vertice dal CG che ora fa parte del CH
         conflictGraph->deleteVertexFromCG(*pointIter);
     }
@@ -118,7 +119,7 @@ void MyCHSolver::buildCH()
 
 
 /**
- * @brief MyCHSolver::updateCanvas metodo che mi permette di aggiornare il canvas se il bottone "show phases" è abilitato
+ * @brief MyCHSolver::updateCanvas metodo che mi permette di aggiornare il canvas se il bottone "Show Phases" è abilitato
  */
 void MyCHSolver::updateCanvas()
 {
@@ -298,15 +299,12 @@ int MyCHSolver::returnCoplanarity(const std::vector<Pointd> fourPoints) const
     //se il determinante è compreso in questo intervallo, i punti sono complanari e resetto il valore del determinante per comodità
     bool sign = det > -std::numeric_limits<double>::epsilon() && det < std::numeric_limits<double>::epsilon();
 
-    if(!sign){
-        if(det < -std::numeric_limits<double>::epsilon()){
-            return -1;
-        } else {
-            return  1;
-        }
-    } else {
-        return 0;
+    if(!sign)
+    {
+        if(det < -std::numeric_limits<double>::epsilon()) return -1;
+        else return  1;
     }
+    else return 0;
 }
 
 
