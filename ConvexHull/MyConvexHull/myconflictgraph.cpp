@@ -218,7 +218,7 @@ std::map<Dcel::HalfEdge*, std::set<Pointd>*> MyConflictGraph::lookForVerticesInC
 
 /**
  * @brief MyConflictGraph::deleteFacesFromCG metodo che elimina il set di facce visibili dal nuovo punto dai rispettivi conflict graph
- * @param visibleFaces faccia visibile dal nuovo punto (da eliminare)
+ * @param visibleFace faccia visibile dal nuovo punto (da eliminare)
  */
 void MyConflictGraph::deleteFacesFromCG(Dcel::Face *visibleFace)
 {    
@@ -238,8 +238,8 @@ void MyConflictGraph::deleteFacesFromCG(Dcel::Face *visibleFace)
 
 /**
  * @brief MyConflictGraph::isVisible metodo che, presi una faccia e un punto, rende true se la faccia vede il punto, false altrimenti
- * @param vertex vertice in esame
  * @param face faccia in esame
+ * @param point vertice in esame
  * @return true se i due sono in conflitto, false altrimenti
  */
 bool MyConflictGraph::isVisible(const Dcel::Face *face, const Pointd point) const
